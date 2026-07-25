@@ -1,0 +1,90 @@
+# HybridBench OS - Core System Packages
+
+# Base system
+linux-image-amd64
+linux-headers-amd64
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+
+# Boot loaders
+grub-efi-amd64
+grub-pc
+
+# Live USB tools
+live-boot
+systemd-sysv
+
+# Core utilities
+sudo
+git
+curl
+wget
+htop
+tmux
+vim
+nano
+tree
+jq
+unzip
+p7zip-full
+
+# Development tools
+build-essential
+cmake
+pkg-config
+python3
+python3-pip
+python3-venv
+python3-dev
+rustc
+cargo
+nodejs
+npm
+
+# Container runtime
+podman
+podman-compose
+buildah
+
+# Networking
+network-manager
+openssh-client
+openssh-server
+nmap
+
+# USB/Serial
+usbutils
+usbip
+linux-tools-generic
+picocom
+minicom
+screen
+setserial
+
+# GPIO/Hardware
+i2c-tools
+spi-tools
+libgpiod-tools
+python3-smbus
+python3-gpiozero
+
+# GUI essentials
+xorg
+xinit
+openbox
+lightdm
+lightdm-gtk-greeter
+firefox-esr
+thunar
+pcmanfm
+lxtask
+
+# Audio (for alerts)
+pulseaudio
+pavucontrol
+
+# Display management
+xserver-xorg-video-intel
+xserver-xorg-video-amdgpu
+xserver-xorg-video-nouveau

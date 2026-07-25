@@ -1,0 +1,14 @@
+FROM alpine:3.20
+
+LABEL maintainer="HybridBench OS"
+LABEL description="Samsung Odin tools (minimal)"
+LABEL stage="dev"
+
+RUN mkdir -p /workspace /logs /opt/tools /opt/tools/configs /firmware
+
+COPY configs/ /opt/tools/configs/
+COPY entrypoint.sh /opt/entrypoint.sh
+RUN chmod +x /opt/entrypoint.sh
+
+VOLUME ["/workspace", "/logs", "/firmware"]
+ENTRYPOINT ["/opt/entrypoint.sh"]

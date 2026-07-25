@@ -1,0 +1,67 @@
+{
+  "odin_protocol": {
+    "version": "v1",
+    "max_packet_size": 131072,
+    "handshake_packet": [0x76, 0x30, 0x30, 0x30, 0x30],
+    "end_packet": [0x00, 0x00, 0x00, 0x00, 0x00],
+    "timeout_ms": 10000
+  },
+  "partitions": {
+    "BL": {
+      "name": "Bootloader",
+      "file_pattern": "BL_*.tar.md5",
+      "flash_partition": "bootloader",
+      "required": true
+    },
+    "AP": {
+      "name": "System/Main",
+      "file_pattern": "AP_*.tar.md5",
+      "flash_partition": "system",
+      "required": true
+    },
+    "CP": {
+      "name": "Modem/Radio",
+      "file_pattern": "CP_*.tar.md5",
+      "flash_partition": "modem",
+      "required": false
+    },
+    "CSC": {
+      "name": "Consumer Software Customization",
+      "file_pattern": "CSC_*.tar.md5",
+      "flash_partition": "csc",
+      "required": false
+    },
+    "HOME_CSC": {
+      "name": "Home CSC (preserves data)",
+      "file_pattern": "HOME_CSC_*.tar.md5",
+      "flash_partition": "csc",
+      "required": false
+    }
+  },
+  "devices": {
+    "SM-S911B": {
+      "name": "Galaxy S23",
+      "codename": "r0q",
+      "platform": "exynos2200",
+      "flash_mode": "odin"
+    },
+    "SM-S916B": {
+      "name": "Galaxy S23+",
+      "codename": "r0q+",
+      "platform": "exynos2200",
+      "flash_mode": "odin"
+    },
+    "SM-S918B": {
+      "name": "Galaxy S23 Ultra",
+      "codename": "r0qultra",
+      "platform": "exynos2200",
+      "flash_mode": "odin"
+    },
+    "SM-S926B": {
+      "name": "Galaxy S25",
+      "codename": "r0s",
+      "platform": "exynos2500",
+      "flash_mode": "odin"
+    }
+  }
+}

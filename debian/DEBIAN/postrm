@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+APP_DIR="/usr/share/hybridbench"
+DATA_DIR="/var/lib/hybridbench"
+LOG_DIR="/var/log/hybridbench"
+
+echo "Removing HybridBench..."
+
+# Remove application files
+rm -rf "$APP_DIR"
+rm -f /usr/bin/hybridbench
+rm -f /usr/bin/hybridbench-hal
+rm -f /usr/bin/hybridbench-ai
+rm -f /usr/share/applications/hybridbench.desktop
+rm -f /usr/share/icons/hicolor/scalable/apps/hybridbench.svg
+rm -f /usr/share/metainfo/hybridbench.appdata.xml
+rm -f /lib/udev/rules.d/99-hybridbench.rules
+
+# Reload udev
+udevadm control --reload-rules 2>/dev/null || true
+
+# Optionally remove data (ask user)
+echo ""
+echo "Application files removed."
+echo ""
+echo "To also remove user data and projects, run:"
+echo "  sudo rm -rf $DATA_DIR $LOG_DIR"
+echo ""
+echo "Done."

@@ -1,0 +1,49 @@
+Package: hybridbench
+Version: 0.1.0
+Section: electronics
+Priority: optional
+Architecture: amd64
+Maintainer: HybridBench Team <team@hybridbench.dev>
+Depends: python3 (>= 3.10),
+         libusb-1.0-0,
+         usbutils
+Recommends: python3-venv,
+            python3-pip,
+            nodejs (>= 18),
+            npm,
+            podman | docker.io,
+            adb,
+            fastboot,
+            i2c-tools,
+            picocom | minicom,
+            git,
+            curl,
+            wget,
+            sigrok-cli,
+            openocd,
+            kicad,
+            openhantek,
+            pulseview,
+            podman-compose | docker-compose,
+            python3-onnxruntime,
+            python3-opencv,
+            fluke-dmm
+Suggests: usbmount,
+          gnome-terminal | xfce4-terminal | konsole
+Homepage: https://hybridbench.dev
+Description: Linux Electronics Engineering & Mobile Device Servicing Platform
+ HybridBench is a professional Linux desktop application that unifies
+ electronics engineering, board-level diagnostics, embedded systems
+ development, and mobile device servicing into a single integrated platform.
+ .
+ Features include:
+  * Hardware Abstraction Layer (USB, UART, SPI, I2C, JTAG, SWD, CAN)
+  * Electronics Workspace with instrument integration
+  * Mobile Device Service Workspace (Android, iOS, Qualcomm, MediaTek)
+  * AI-Assisted Diagnostics and Repair Recommendations
+  * Schematic Overlay System with component recognition
+  * Power Analysis with boot signature matching
+  * Plugin Marketplace for extensibility
+  * Project Management for repair laboratories
+  * Containerized vendor toolchains (Samsung, Apple, Qualcomm, MediaTek)
+Installed-Size: 652

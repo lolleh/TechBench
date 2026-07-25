@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "format_version": "1.0",
+    "name": "Mobile Repair PMICs",
+    "description": "Power Management ICs common in mobile devices",
+    "author": "TechBench",
+    "date": "2024-01-01"
+  },
+  "components": [
+    {
+      "id": "PM8550",
+      "name": "Qualcomm PM8550",
+      "vendor": "Qualcomm",
+      "type": "PMIC",
+      "package": "BGA",
+      "pins": 145,
+      "description": "Primary PMIC for Snapdragon 8 Gen 2/3",
+      "voltage_rails": [
+        {"name": "VREG_L1", "voltage": "0.88V", "current": "1500mA", "type": "LDO"},
+        {"name": "VREG_L3", "voltage": "1.2V", "current": "1000mA", "type": "LDO"},
+        {"name": "VREG_L5", "voltage": "1.8V", "current": "800mA", "type": "LDO"},
+        {"name": "VREG_L7", "voltage": "2.95V", "current": "500mA", "type": "LDO"},
+        {"name": "VREG_L10", "voltage": "1.3V", "current": "1200mA", "type": "LDO"},
+        {"name": "VREG_S1", "voltage": "0.75V", "current": "3000mA", "type": "SMPS"},
+        {"name": "VREG_S2", "voltage": "0.5V", "current": "4000mA", "type": "SMPS"},
+        {"name": "VREG_S3", "voltage": "1.05V", "current": "2500mA", "type": "SMPS"},
+        {"name": "VREG_S4", "voltage": "1.2V", "current": "2000mA", "type": "SMPS"}
+      ],
+      "test_points": {
+        "TP_L1": {"pin": "A1", "rail": "VREG_L1"},
+        "TP_L3": {"pin": "B2", "rail": "VREG_L3"},
+        "TP_L5": {"pin": "C3", "rail": "VREG_L5"},
+        "TP_S1": {"pin": "D4", "rail": "VREG_S1"},
+        "TP_S2": {"pin": "E5", "rail": "VREG_S2"}
+      },
+      "common_faults": [
+        {"symptom": "No VREG_L3 output", "cause": "Internal LDO failure", "solution": "Replace PMIC"},
+        {"symptom": "Overheating", "cause": "Short on output rail", "solution": "Check capacitors, reball if needed"},
+        {"symptom": "No power at all", "cause": "PMIC not initializing", "solution": "Check enable signals, replace PMIC"}
+      ],
+      "schematic_symbol": "PM8550.kicad_sym",
+      "footprint": "PM8550_BGA.kicad_mod"
+    },
+    {
+      "id": "MT6370",
+      "name": "MediaTek MT6370",
+      "vendor": "MediaTek",
+      "type": "PMIC + Charger",
+      "package": "QFN",
+      "pins": 48,
+      "description": "Combined PMIC and charger for MediaTek platforms",
+      "voltage_rails": [
+        {"name": "VPROC", "voltage": "0.6V-1.3V", "current": "3000mA", "type": "SMPS"},
+        {"name": "VMODEM", "voltage": "0.7V-1.2V", "current": "2000mA", "type": "SMPS"},
+        {"name": "VDRAM", "voltage": "1.1V", "current": "1500mA", "type": "LDO"},
+        {"name": "VCN18", "voltage": "1.8V", "current": "300mA", "type": "LDO"},
+        {"name": "VCN28", "voltage": "2.8V", "current": "300mA", "type": "LDO"},
+        {"name": "VCN33", "voltage": "3.3V", "current": "500mA", "type": "LDO"}
+      ],
+      "charger": {
+        "input_voltage": "3.9V-5.5V",
+        "charge_current": "3000mA",
+        "battery_regulation": "4.2V-4.4V"
+      },
+      "test_points": {
+        "TP_VPROC": {"pin": "1", "rail": "VPROC"},
+        "TP_VMODEM": {"pin": "5", "rail": "VMODEM"},
+        "TP_VDRAM": {"pin": "10", "rail": "VDRAM"},
+        "TP_VBUS": {"pin": "20", "rail": "VBUS"},
+        "TP_BAT": {"pin": "25", "rail": "VBAT"}
+      },
+      "common_faults": [
+        {"symptom": "Not charging", "cause": "Charger IC failure", "solution": "Check VBUS input, replace MT6370"},
+        {"symptom": "No VPROC output", "cause": "Buck converter failure", "solution": "Check inductor, replace IC"},
+        {"symptom": "Overheating during charge", "cause": "Short on output", "solution": "Check capacitors on output rails"}
+      ],
+      "schematic_symbol": "MT6370.kicad_sym",
+      "footprint": "MT6370_QFN.kicad_mod"
+    },
+    {
+      "id": "S2MPS15",
+      "name": "Samsung S2MPS15",
+      "vendor": "Samsung (Samsung Electro-Mechanics)",
+      "type": "PMIC",
+      "package": "BGA",
+      "pins": 120,
+      "description": "PMIC for Samsung Exynos platforms",
+      "voltage_rails": [
+        {"name": "BUCK1", "voltage": "0.6V", "current": "4000mA", "type": "SMPS"},
+        {"name": "BUCK2", "voltage": "1.0V", "current": "2500mA", "type": "SMPS"},
+        {"name": "BUCK3", "voltage": "1.2V", "current": "2000mA", "type": "SMPS"},
+        {"name": "BUCK4", "voltage": "0.75V", "current": "3000mA", "type": "SMPS"},
+        {"name": "LDO1", "voltage": "1.8V", "current": "500mA", "type": "LDO"},
+        {"name": "LDO2", "voltage": "2.8V", "current": "300mA", "type": "LDO"},
+        {"name": "LDO3", "voltage": "3.3V", "current": "300mA", "type": "LDO"},
+        {"name": "LDO4", "voltage": "1.2V", "current": "200mA", "type": "LDO"}
+      ],
+      "test_points": {
+        "TP_BUCK1": {"pin": "A1", "rail": "BUCK1"},
+        "TP_BUCK2": {"pin": "B2", "rail": "BUCK2"},
+        "TP_BUCK3": {"pin": "C3", "rail": "BUCK3"},
+        "TP_LDO1": {"pin": "D4", "rail": "LDO1"},
+        "TP_LDO2": {"pin": "E5", "rail": "LDO2"}
+      },
+      "common_faults": [
+        {"symptom": "No BUCK1 output", "cause": "Buck converter failure", "solution": "Check inductor, replace PMIC"},
+        {"symptom": "Unstable output", "cause": "Capacitor failure", "solution": "Replace output capacitors"},
+        {"symptom": "No LDO output", "cause": "Internal LDO failure", "solution": "Replace PMIC"}
+      ],
+      "schematic_symbol": "S2MPS15.kicad_sym",
+      "footprint": "S2MPS15_BGA.kicad_mod"
+    }
+  ]
+}

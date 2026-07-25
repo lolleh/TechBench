@@ -1,0 +1,76 @@
+# HybridBench USB Device Rules
+# Grants access to plugdev group for common repair/diagnostic devices
+
+# Bus Pirate
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6010", GROUP="plugdev", MODE="0664"
+
+# FT232R USB-UART Bridge
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0664"
+
+# CP210x USB-UART Bridge
+SUBSYSTEM=="usb", ATTR{idVendor}=="10c4", ATTR{idProduct}=="ea60", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="10c4", ATTR{idProduct}=="ea70", GROUP="plugdev", MODE="0664"
+
+# CH340/CH341 USB-Serial
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="5523", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="7523", GROUP="plugdev", MODE="0664"
+
+# ST-Link V2 (JTAG/SWD)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="3748", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="374b", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="3752", GROUP="plugdev", MODE="0664"
+
+# J-Link
+SUBSYSTEM=="usb", ATTR{idVendor}=="1366", ATTR{idProduct}=="0101", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1366", ATTR{idProduct}=="0105", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1366", ATTR{idProduct}=="1015", GROUP="plugdev", MODE="0664"
+
+# FTDI-based probes
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6014", GROUP="plugdev", MODE="0664"
+
+# Cypress FX2-based (Bus Pirate, etc.)
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="8613", GROUP="plugdev", MODE="0664"
+
+# USBasp Programmer
+SUBSYSTEM=="usb", ATTR{idVendor}=="16c0", ATTR{idProduct}=="05dc", GROUP="plugdev", MODE="0664"
+
+# ATmega16U2 on Arduino (DFU)
+SUBSYSTEM=="usb", ATTR{idVendor}=="03eb", ATTR{idProduct}=="2fef", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03eb", ATTR{idProduct}=="6124", GROUP="plugdev", MODE="0664"
+
+# Android ADB
+SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", GROUP="plugdev", MODE="0664"
+
+# Samsung Download Mode
+SUBSYSTEM=="usb", ATTR{idVendor}=="04e8", GROUP="plugdev", MODE="0664"
+
+# Qualcomm EDL (9008)
+SUBSYSTEM=="usb", ATTR{idVendor}=="05c6", ATTR{idProduct}=="9008", GROUP="plugdev", MODE="0664"
+
+# MediaTek Preloader
+SUBSYSTEM=="usb", ATTR{idVendor}=="0e8d", ATTR{idProduct}=="0003", GROUP="plugdev", MODE="0664"
+
+# MediaTek VCOM
+SUBSYSTEM=="usb", ATTR{idVendor}=="0e8d", ATTR{idProduct}=="3fb2", GROUP="plugdev", MODE="0664"
+
+# Apple DFU Mode
+SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="1227", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="1281", GROUP="plugdev", MODE="0664"
+
+# PulseView / Sigrok
+SUBSYSTEM=="usb", ATTR{idVendor}=="09db", GROUP="plugdev", MODE="0664"
+
+# Digilent
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6010", GROUP="plugdev", MODE="0664"
+
+# Cypress KitProg
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="f139", GROUP="plugdev", MODE="0664"
+
+# Generic USB-Serial adapters
+SUBSYSTEM=="usb", ATTR{idVendor}=="067b", ATTR{idProduct}=="2303", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="067b", ATTR{idProduct}=="23a3", GROUP="plugdev", MODE="0664"
+
+# OpenHantek
+SUBSYSTEM=="usb", ATTR{idVendor}=="049f", ATTR{idProduct}=="0003", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="049f", ATTR{idProduct}=="0013", GROUP="plugdev", MODE="0664"

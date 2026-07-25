@@ -1,0 +1,64 @@
+{
+  "sp_flash_tool": {
+    "version": "v5",
+    "connection_speed": 921600,
+    "baud_rates": [921600, 460800, 115200],
+    "handshake_timeout_ms": 5000,
+    "command_timeout_ms": 10000
+  },
+  "preloader": {
+    "usb_vid": "0e8d",
+    "usb_pid": "0003",
+    "commands": {
+      "get_version": 0x01,
+      "get_hw_code": 0x02,
+      "get_hw_version": 0x03,
+      "get_sw_version": 0x04,
+      "read_partition": 0x10,
+      "write_partition": 0x11,
+      "erase_partition": 0x12,
+      "format_partition": 0x13,
+      "download_section": 0x20,
+      "upload_section": 0x21,
+      "jump_da": 0x30,
+      "reset": 0xFF
+    }
+  },
+  "download_agents": {
+    "MTK_AllInOne_DA": {
+      "description": "Universal Download Agent",
+      "supported_chips": ["MT6735", "MT6750", "MT6755", "MT6761", "MT6765", "MT6768", "MT6779", "MT6785", "MT6833", "MT6853", "MT6873", "MT6877", "MT6885", "MT6889", "MT6893", "MT6983", "MT6985", "MT6991"]
+    }
+  },
+  "partitions": {
+    "preloader": {"name": "Preloader", "type": "boot", "required": true},
+    "preloader_a": {"name": "Preloader A", "type": "boot", "required": true},
+    "preloader_b": {"name": "Preloader B", "type": "boot", "required": false},
+    "recovery": {"name": "Recovery", "type": "boot", "required": true},
+    "boot": {"name": "Boot", "type": "boot", "required": true},
+    "boot_a": {"name": "Boot A", "type": "boot", "required": true},
+    "boot_b": {"name": "Boot B", "type": "boot", "required": true},
+    "system": {"name": "System", "type": "system", "required": true},
+    "system_a": {"name": "System A", "type": "system", "required": true},
+    "system_b": {"name": "System B", "type": "system", "required": false},
+    "vendor": {"name": "Vendor", "type": "system", "required": true},
+    "userdata": {"name": "Userdata", "type": "data", "required": true},
+    "metadata": {"name": "Metadata", "type": "data", "required": true},
+    "nvram": {"name": "NVRAM", "type": "config", "required": true},
+    "nvcfg": {"name": "NVCfg", "type": "config", "required": true},
+    "proinfo": {"name": "ProInfo", "type": "config", "required": true}
+  },
+  "chipsets": {
+    "MT6735": {"name": "Helio A20", "arch": "arm64", "cores": 4},
+    "MT6765": {"name": "Helio G35", "arch": "arm64", "cores": 8},
+    "MT6768": {"name": "Helio G80", "arch": "arm64", "cores": 8},
+    "MT6785": {"name": "Helio G90T", "arch": "arm64", "cores": 8},
+    "MT6853": {"name": "Dimensity 720", "arch": "arm64", "cores": 8},
+    "MT6877": {"name": "Dimensity 920", "arch": "arm64", "cores": 8},
+    "MT6885": {"name": "Dimensity 1000L", "arch": "arm64", "cores": 8},
+    "MT6893": {"name": "Dimensity 1200", "arch": "arm64", "cores": 8},
+    "MT6983": {"name": "Dimensity 9200", "arch": "arm64", "cores": 8},
+    "MT6985": {"name": "Dimensity 9300", "arch": "arm64", "cores": 8},
+    "MT6991": {"name": "Dimensity 9400", "arch": "arm64", "cores": 8}
+  }
+}

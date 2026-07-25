@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.hybridbench.app</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>HybridBench</name>
+  <summary>Linux Electronics Engineering &amp; Mobile Device Servicing Platform</summary>
+  <description>
+    <p>
+      HybridBench is a professional Linux desktop application that unifies
+      electronics engineering, board-level diagnostics, embedded systems
+      development, and mobile device servicing into a single integrated platform.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Hardware Abstraction Layer (USB, UART, SPI, I2C, JTAG, SWD, CAN)</li>
+      <li>Electronics Workspace with instrument integration</li>
+      <li>Mobile Device Service Workspace (Android, iOS, Qualcomm, MediaTek)</li>
+      <li>AI-Assisted Diagnostics and Repair Recommendations</li>
+      <li>Schematic Overlay System with component recognition</li>
+      <li>Power Analysis with boot signature matching</li>
+      <li>Plugin Marketplace for extensibility</li>
+      <li>Containerized vendor toolchains</li>
+    </ul>
+  </description>
+  <url type="homepage">https://hybridbench.dev</url>
+  <url type="bugtracker">https://github.com/hybridbench/hybridbench/issues</url>
+  <developer id="dev.hybridbench">
+    <name>HybridBench Team</name>
+  </developer>
+  <launchable type="desktop-id">hybridbench.desktop</launchable>
+  <provides>
+    <binary>hybridbench</binary>
+  </provides>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2025-07-25">
+      <description>
+        <p>Initial release of HybridBench.</p>
+        <ul>
+          <li>Electronics workspace with oscilloscope, logic analyzer, multimeter views</li>
+          <li>Mobile service workspace with ADB/Fastboot integration</li>
+          <li>AI assistant for diagnostics and repair guidance</li>
+          <li>Project management and plugin system</li>
+          <li>HAL supporting USB, UART, SPI, I2C, JTAG, SWD, CAN</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

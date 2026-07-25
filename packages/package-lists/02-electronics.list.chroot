@@ -1,0 +1,45 @@
+# HybridBench OS - Electronics Engineering Packages
+
+# Logic Analyzer
+sigrok-firmware-fx2lafw
+sigrok-cli
+pulseview
+
+# Oscilloscope
+openhantek
+
+# JTAG/SWD
+openocd
+
+# PCB Design
+kicad
+kicad-libraries
+kicad-symbols
+kicad-footprints
+kicad-3dmodels
+
+# Circuit Simulation
+ngspice
+gtkwave
+
+# Signal Analysis
+gnuplot
+python3-numpy
+python3-scipy
+python3-matplotlib
+
+# Protocol Analysis
+python3-construct
+python3-can
+
+# Thermal Imaging
+python3-opencv
+
+# Hardware Monitoring
+lm-sensors
+hddtemp
+smartmontools
+
+# Power Supply Control
+python3-pyserial
+python3-influxdb

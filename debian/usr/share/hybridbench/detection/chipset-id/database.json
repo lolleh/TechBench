@@ -1,0 +1,152 @@
+{
+  "05c6:90db": {
+    "vendor": "qualcomm",
+    "chipset": "snapdragon",
+    "name": "Qualcomm QDLoader 9008",
+    "description": "Qualcomm Emergency Download (EDL) mode",
+    "boot_modes": ["edl", "normal"],
+    "tools": ["qfil", "firehose", "sahara", "edl"],
+    "container": "qualcomm-edl",
+    "test_points": {
+      "edl": "Short test point TP401 to GND"
+    },
+    "common_devices": [
+      "Xiaomi (most models)",
+      "OnePlus (most models)",
+      "Oppo (most models)",
+      "Vivo (most models)",
+      "Realme (most models)",
+      "Motorola (some models)"
+    ]
+  },
+  "05c6:9008": {
+    "vendor": "qualcomm",
+    "chipset": "snapdragon",
+    "name": "Qualcomm HS-USB QDLoader 9008",
+    "description": "Qualcomm Emergency Download (EDL) mode (alternate)",
+    "boot_modes": ["edl"],
+    "tools": ["qfil", "firehose", "sahara", "edl"],
+    "container": "qualcomm-edl"
+  },
+  "0e8d:0003": {
+    "vendor": "mediatek",
+    "chipset": "mtk",
+    "name": "MediaTek Preloader",
+    "description": "MediaTek preloader mode for flashing",
+    "boot_modes": ["preloader", "normal"],
+    "tools": ["sp-flash-tool", "mtk-daemon", "mtkclient"],
+    "container": "mediatek-flash",
+    "common_devices": [
+      "Most MediaTek-based Android phones",
+      "Xiaomi (MTK models)",
+      "Realme (MTK models)",
+      "Vivo (MTK models)"
+    ]
+  },
+  "0e8d:2000": {
+    "vendor": "mediatek",
+    "chipset": "mtk",
+    "name": "MediaTek DA USB VCOM",
+    "description": "MediaTek Download Agent mode",
+    "boot_modes": ["da", "normal"],
+    "tools": ["sp-flash-tool", "mtk-daemon"],
+    "container": "mediatek-flash"
+  },
+  "04e8:6860": {
+    "vendor": "samsung",
+    "chipset": "exynos",
+    "name": "Samsung Download Mode",
+    "description": "Samsung Odin download mode",
+    "boot_modes": ["odin", "normal"],
+    "tools": ["heimdall", "odin", "jfdownload"],
+    "container": "samsung-odin",
+    "common_devices": [
+      "Samsung Galaxy S series",
+      "Samsung Galaxy Note series",
+      "Samsung Galaxy A series",
+      "Samsung Galaxy Tab series"
+    ]
+  },
+  "05ac:1227": {
+    "vendor": "apple",
+    "chipset": "a-series",
+    "name": "Apple DFU Mode",
+    "description": "Apple Device Firmware Upgrade mode",
+    "boot_modes": ["dfu", "recovery", "normal"],
+    "tools": ["idevicerestore", "checkm8", "libimobiledevice"],
+    "container": "apple-tools",
+    "note": "checkm8 only works on A11 and below"
+  },
+  "05ac:1281": {
+    "vendor": "apple",
+    "chipset": "a-series",
+    "name": "Apple Recovery Mode",
+    "description": "Apple Recovery (iBoot) mode",
+    "boot_modes": ["recovery", "normal"],
+    "tools": ["idevicerestore", "libimobiledevice"],
+    "container": "apple-tools"
+  },
+  "05ac:1222": {
+    "vendor": "apple",
+    "chipset": "a-series",
+    "name": "Apple iOS Device",
+    "description": "Apple device in normal mode",
+    "boot_modes": ["normal"],
+    "tools": ["libimobiledevice", "ideviceinstaller", "ifuse"],
+    "container": "apple-tools"
+  },
+  "18d1:4ee7": {
+    "vendor": "google",
+    "chipset": "pixel",
+    "name": "Google Pixel (Fastboot)",
+    "description": "Google Pixel in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot", "adb"],
+    "container": "android-tools"
+  },
+  "18d1:d002": {
+    "vendor": "google",
+    "chipset": "pixel",
+    "name": "Google Pixel (ADB)",
+    "description": "Google Pixel in ADB mode",
+    "boot_modes": ["normal"],
+    "tools": ["adb"],
+    "container": "android-tools"
+  },
+  "2717:ff48": {
+    "vendor": "xiaomi",
+    "chipset": "snapdragon",
+    "name": "Xiaomi (Fastboot)",
+    "description": "Xiaomi device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot", "miflash"],
+    "container": "android-tools"
+  },
+  "2717:ff40": {
+    "vendor": "xiaomi",
+    "chipset": "mtk",
+    "name": "Xiaomi (MediaTek)",
+    "description": "Xiaomi MediaTek device",
+    "boot_modes": ["preloader", "normal"],
+    "tools": ["sp-flash-tool", "mtkclient"],
+    "container": "mediatek-flash"
+  },
+  "0bb4:0c02": {
+    "vendor": "htc",
+    "chipset": "qualcomm",
+    "name": "HTC (Fastboot)",
+    "description": "HTC device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot"],
+    "container": "android-tools"
+  },
+  "0482:1bf5": {
+    "vendor": "sony",
+    "chipset": "qualcomm",
+    "name": "Sony (Flashmode)",
+    "description": "Sony Xperia flashmode",
+    "boot_modes": ["flashmode", "normal"],
+    "tools": ["flashtool", "fastboot"],
+    "container": "android-tools"
+  }
+}

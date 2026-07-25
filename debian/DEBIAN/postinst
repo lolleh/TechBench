@@ -1,0 +1,163 @@
+#!/bin/bash
+set -e
+
+APP_NAME="hybridbench"
+APP_DIR="/usr/share/hybridbench"
+VENV_DIR="/usr/share/hybridbench/venv"
+LOG_DIR="/var/log/hybridbench"
+DATA_DIR="/var/lib/hybridbench"
+
+echo "Setting up HybridBench..."
+
+# Create application directory
+mkdir -p "$APP_DIR"
+mkdir -p "$LOG_DIR"
+mkdir -p "$DATA_DIR"
+mkdir -p "$DATA_DIR/projects"
+mkdir -p "$DATA_DIR/databases"
+mkdir -p "$DATA_DIR/firmware"
+mkdir -p "$DATA_DIR/schematics"
+mkdir -p "$DATA_DIR/signatures"
+
+# Copy application files
+cp -r /usr/share/hybridbench/ai "$APP_DIR/"
+cp -r /usr/share/hybridbench/database "$APP_DIR/"
+cp -r /usr/share/hybridbench/detection "$APP_DIR/"
+cp -r /usr/share/hybridbench/scripts "$APP_DIR/"
+cp -r /usr/share/hybridbench/gui "$APP_DIR/"
+
+# Create Python virtual environment
+echo "Creating Python virtual environment..."
+python3 -m venv "$VENV_DIR" 2>/dev/null || true
+if [ -d "$VENV_DIR" ]; then
+    "$VENV_DIR/bin/pip" install --quiet --upgrade pip 2>/dev/null || true
+    "$VENV_DIR/bin/pip" install --quiet \
+        pyudev \
+        serial \
+        pillow \
+        onnxruntime \
+        2>/dev/null || true
+fi
+
+# Create launcher script
+cat > /usr/bin/hybridbench << 'LAUNCHER'
+#!/bin/bash
+# HybridBench Launcher
+APP_DIR="/usr/share/hybridbench"
+VENV_DIR="$APP_DIR/venv"
+
+# Set environment
+export HB_DATA_DIR="/var/lib/hybridbench"
+export HB_LOG_DIR="/var/log/hybridbench"
+export HB_APP_DIR="$APP_DIR"
+
+# Check if GUI binary exists (Tauri build)
+if [ -f "$APP_DIR/bin/hybridbench" ]; then
+    exec "$APP_DIR/bin/hybridbench" "$@"
+fi
+
+# Fallback: run web interface
+cd "$APP_DIR/gui"
+if [ -d "node_modules" ]; then
+    echo "Starting HybridBench web interface..."
+    echo "Access at: http://localhost:1420"
+    exec npx vite --host 0.0.0.0 --port 1420
+else
+    echo "Installing dependencies..."
+    npm install --production 2>/dev/null || true
+    echo "Starting HybridBench web interface..."
+    echo "Access at: http://localhost:1420"
+    exec npx vite --host 0.0.0.0 --port 1420
+fi
+LAUNCHER
+chmod +x /usr/bin/hybridbench
+
+# Create HAL CLI launcher
+cat > /usr/bin/hybridbench-hal << 'HAL_LAUNCHER'
+#!/bin/bash
+# HybridBench HAL CLI
+APP_DIR="/usr/share/hybridbench"
+VENV_DIR="$APP_DIR/venv"
+
+# Try native binary first
+if [ -f "$APP_DIR/bin/hybridbench-hal" ]; then
+    exec "$APP_DIR/bin/hybridbench-hal" "$@"
+fi
+
+# Fallback to Python
+if [ -d "$VENV_DIR" ]; then
+    exec "$VENV_DIR/bin/python3" "$APP_DIR/detection/usb-scanner/detector.py" "$@"
+fi
+
+echo "HAL binary not found. Please install the full package."
+exit 1
+HAL_LAUNCHER
+chmod +x /usr/bin/hybridbench-hal
+
+# Create AI assistant launcher
+cat > /usr/bin/hybridbench-ai << 'AI_LAUNCHER'
+#!/bin/bash
+# HybridBench AI Assistant
+APP_DIR="/usr/share/hybridbench"
+VENV_DIR="$APP_DIR/venv"
+
+if [ -d "$VENV_DIR" ]; then
+    exec "$VENV_DIR/bin/python3" "$APP_DIR/ai/engine.py" "$@"
+else
+    exec python3 "$APP_DIR/ai/engine.py" "$@"
+fi
+AI_LAUNCHER
+chmod +x /usr/bin/hybridbench-ai
+
+# Initialize database if not exists
+DB_FILE="$DATA_DIR/databases/hybridbench.db"
+if [ ! -f "$DB_FILE" ]; then
+    echo "Initializing database..."
+    if [ -d "$VENV_DIR" ]; then
+        "$VENV_DIR/bin/python3" -c "
+import sqlite3, os
+db = sqlite3.connect('$DB_FILE')
+schema = open('$APP_DIR/database/schema/001_initial.sql').read()
+db.executescript(schema)
+seeds = [
+    '$APP_DIR/database/seeds/001_components.sql',
+    '$APP_DIR/database/seeds/002_power_signatures.sql',
+]
+for seed in seeds:
+    if os.path.exists(seed):
+        db.executescript(open(seed).read())
+db.close()
+print('Database initialized.')
+" 2>/dev/null || true
+    fi
+fi
+
+# Set permissions
+chown -R root:root "$APP_DIR"
+chmod -R 755 "$APP_DIR"
+chown -R root:root "$DATA_DIR"
+chmod -R 775 "$DATA_DIR"
+chown -R root:root "$LOG_DIR"
+chmod -R 775 "$LOG_DIR"
+
+# Reload udev rules
+udevadm control --reload-rules 2>/dev/null || true
+udevadm trigger 2>/dev/null || true
+
+# Add plugdev group for USB access (if not already there)
+if getent group plugdev > /dev/null 2>&1; then
+    echo "plugdev group exists"
+else
+    addgroup plugdev 2>/dev/null || true
+fi
+
+echo ""
+echo "HybridBench installed successfully!"
+echo ""
+echo "To start: hybridbench"
+echo "Or run: sudo systemctl start hybridbench"
+echo ""
+echo "NOTE: Add your user to the 'plugdev' group for USB access:"
+echo "  sudo usermod -aG plugdev \$USER"
+echo "  Then log out and back in."
+echo ""

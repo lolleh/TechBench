@@ -1,0 +1,183 @@
+.github:
+  name: HybridBench OS CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '20'
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check Rust formatting
+        working-directory: hal
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        working-directory: hal
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install GUI dependencies
+        working-directory: gui
+        run: npm ci
+
+      - name: Check TypeScript
+        working-directory: gui
+        run: npm run typecheck
+
+      - name: Check ESLint
+        working-directory: gui
+        run: npm run lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run HAL tests
+        working-directory: hal
+        run: cargo test
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install GUI dependencies
+        working-directory: gui
+        run: npm ci
+
+      - name: Run GUI tests
+        working-directory: gui
+        run: npm test
+
+  build-containers:
+    name: Build Containers
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        container:
+          - android-tools
+          - apple-tools
+          - qualcomm-edl
+          - mediatek-flash
+          - samsung-odin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: containers/${{ matrix.container }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.container }}:latest
+            ghcr.io/${{ github.repository }}/${{ matrix.container }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-iso:
+    name: Build ISO
+    runs-on: ubuntu-latest
+    needs: [test, build-containers]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install live-build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build
+
+      - name: Configure live-build
+        run: |
+          cd base/live-usb
+          lb config \
+            --distribution bookworm \
+            --archive-areas "main contrib non-free non-free-firmware" \
+            --bootloaders "grub-efi" \
+            --firmware-binary true \
+            --firmware-chroot true
+
+      - name: Add package lists
+        run: |
+          mkdir -p base/live-usb/config/package-lists
+          cp packages/package-lists/*.list.chroot base/live-usb/config/package-lists/
+
+      - name: Build ISO
+        run: |
+          cd base/live-usb
+          sudo lb build 2>&1 | tee build.log
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybridbench-os-${{ github.sha }}
+          path: base/live-usb/hybridbench-*.iso
+          retention-days: 30
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build-iso
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: hybridbench-os-${{ github.sha }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            hybridbench-*.iso
+            hybridbench-*.iso.sha256
+          draft: true
+          generate_release_notes: true

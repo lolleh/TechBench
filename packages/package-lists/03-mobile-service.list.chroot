@@ -1,0 +1,52 @@
+# HybridBench OS - Mobile Device Service Packages
+
+# Android Tools
+android-tools-adb
+android-tools-fastboot
+
+# Apple Tools (system packages)
+libimobiledevice6
+libimobiledevice-utils
+libimobiledevice-dev
+ideviceinstaller
+ifuse
+usbmuxd
+libplist-utils
+
+# USB/Serial Communication
+libusb-1.0-0-dev
+python3-usb
+python3-serial
+
+# Device Detection
+udev
+udisks2
+
+# Data Recovery
+testdisk
+photorec
+foremost
+ddrescue
+
+# Hex Editors
+hexedit
+ghex
+
+# Binary Analysis
+binutils
+radare2
+
+# Encryption/Hash (for firmware verification)
+hashdeep
+md5sum
+sha256sum
+
+# Network Analysis (for baseband debugging)
+wireshark
+tshark
+tcpdump
+
+# Archive Tools (for firmware packages)
+unzip
+p7zip-full
+cabextract

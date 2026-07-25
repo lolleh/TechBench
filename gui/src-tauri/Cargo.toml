@@ -1,0 +1,32 @@
+[package]
+name = "techbench"
+version = "0.1.0"
+description = "Linux Electronics Engineering & Mobile Device Servicing Platform"
+authors = ["TechBench Team"]
+license = "MIT"
+repository = "https://github.com/techbench/techbench"
+edition = "2021"
+
+[lib]
+name = "techbench_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

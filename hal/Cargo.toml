@@ -1,0 +1,25 @@
+[package]
+name = "techbench-hal"
+version = "0.1.0"
+edition = "2021"
+description = "Hardware Abstraction Layer for TechBench"
+license = "GPL-3.0"
+
+[dependencies]
+rusb = "0.9"
+serialport = "4.3"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "1"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "techbench-hal"
+path = "src/main.rs"

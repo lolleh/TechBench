@@ -1,0 +1,81 @@
+{
+  "firehose_configs": {
+    "sdm845": {
+      "name": "SDM845",
+      "sector_size": 4096,
+      "max_payload_size": 1048576,
+      "memory_names": {
+        "0": "nand",
+        "1": "spinor",
+        "2": "emmc",
+        "3": "ufs"
+      },
+      "supported_programs": ["emmc", "ufs"],
+      "default_memory": "ufs"
+    },
+    "sm8150": {
+      "name": "SM8150 (Snapdragon 855)",
+      "sector_size": 4096,
+      "max_payload_size": 1048576,
+      "memory_names": {
+        "0": "nand",
+        "1": "spinor",
+        "2": "emmc",
+        "3": "ufs"
+      },
+      "supported_programs": ["emmc", "ufs"],
+      "default_memory": "ufs"
+    },
+    "sm8250": {
+      "name": "SM8250 (Snapdragon 865)",
+      "sector_size": 4096,
+      "max_payload_size": 1048576,
+      "memory_names": {
+        "0": "nand",
+        "1": "spinor",
+        "2": "emmc",
+        "3": "ufs"
+      },
+      "supported_programs": ["emmc", "ufs"],
+      "default_memory": "ufs"
+    },
+    "sm8350": {
+      "name": "SM8350 (Snapdragon 888)",
+      "sector_size": 4096,
+      "max_payload_size": 1048576,
+      "memory_names": {
+        "0": "nand",
+        "1": "spinor",
+        "2": "emmc",
+        "3": "ufs"
+      },
+      "supported_programs": ["emmc", "ufs"],
+      "default_memory": "ufs"
+    },
+    "sm8450": {
+      "name": "SM8450 (Snapdragon 8 Gen 1)",
+      "sector_size": 4096,
+      "max_payload_size": 1048576,
+      "memory_names": {
+        "0": "nand",
+        "1": "spinor",
+        "2": "emmc",
+        "3": "ufs"
+      },
+      "supported_programs": ["emmc", "ufs"],
+      "default_memory": "ufs"
+    }
+  },
+  "partition_tables": {
+    "qualcomm_generic": [
+      {"name": "xbl", "size": "2MB", "type": "boot"},
+      {"name": "xbl_config", "size": "1MB", "type": "config"},
+      {"name": "abl", "size": "2MB", "type": "boot"},
+      {"name": "boot", "size": "64MB", "type": "boot"},
+      {"name": "dtbo", "size": "8MB", "type": "boot"},
+      {"name": "system", "size": "4GB", "type": "system"},
+      {"name": "vendor", "size": "1GB", "type": "system"},
+      {"name": "userdata", "size": "remaining", "type": "data"}
+    ]
+  }
+}

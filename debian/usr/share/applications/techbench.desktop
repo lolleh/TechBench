@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=HybridBench
+GenericName=Electronics & Mobile Repair Platform
+Comment=Linux Electronics Engineering & Mobile Device Servicing Platform
+Exec=/usr/bin/hybridbench
+Icon=hybridbench
+Type=Application
+Categories=Development;Electronics;Engineering;
+Terminal=false
+StartupWMClass=hybridbench
+Keywords=electronics;repair;mobile;soldering;diagnostics;pcb;embedded;
+MimeType=x-scheme-handler/hybridbench;

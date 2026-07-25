@@ -1,0 +1,193 @@
+{
+  "protocols": [
+    {
+      "id": "i2c-pmic",
+      "name": "I2C (PMIC Communication)",
+      "description": "Monitor I2C communication with Power Management ICs",
+      "decoder": "i2c",
+      "channels": {
+        "sda": "D0",
+        "scl": "D1"
+      },
+      "options": {
+        "address_format": "7bit"
+      },
+      "common_devices": [
+        {
+          "name": "Qualcomm PM8550",
+          "address": "0x1C",
+          "registers": {
+            "0x00": "STATUS",
+            "0x01": "MODE",
+            "0x10": "LDO3_CONTROL",
+            "0x11": "LDO3_VOLTAGE",
+            "0x20": "LDO5_CONTROL",
+            "0x21": "LDO5_VOLTAGE"
+          }
+        },
+        {
+          "name": "MediaTek MT6370",
+          "address": "0x6A",
+          "registers": {
+            "0x00": "CHIP_ID",
+            "0x01": "CHIP_REV",
+            "0x10": "TOP_RST_STATUS",
+            "0x20": "CHARGER_CTRL1"
+          }
+        },
+        {
+          "name": "Samsung S2MPS15",
+          "address": "0x66",
+          "registers": {
+            "0x00": "CHIPID",
+            "0x01": "CHIPREV",
+            "0x10": "CTRL1",
+            "0x11": "CTRL2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "spi-ufs",
+      "name": "SPI (UFS Storage)",
+      "description": "Monitor SPI communication with UFS/eMMC storage",
+      "decoder": "spi",
+      "channels": {
+        "clk": "D0",
+        "mosi": "D1",
+        "miso": "D2",
+        "cs": "D3"
+      },
+      "options": {
+        "cpol": 0,
+        "cpha": 0
+      }
+    },
+    {
+      "id": "uart-baseband",
+      "name": "UART (Baseband Debug)",
+      "description": "Monitor UART debug output from baseband processor",
+      "decoder": "uart",
+      "channels": {
+        "rx": "D0",
+        "tx": "D1"
+      },
+      "options": {
+        "baudrate": 115200,
+        "data_bits": 8,
+        "parity": "none",
+        "stop_bits": 1
+      },
+      "common_baudrates": [
+        9600,
+        19200,
+        38400,
+        57600,
+        115200,
+        230400,
+        460800,
+        921600
+      ]
+    },
+    {
+      "id": "usb-pd",
+      "name": "USB-PD (Power Delivery)",
+      "description": "Monitor USB Power Delivery negotiations",
+      "decoder": "usb-pd",
+      "channels": {
+        "cc1": "D0",
+        "cc2": "D1"
+      },
+      "pd_messages": {
+        "0x00": "Reserved",
+        "0x01": "Source_Capabilities",
+        "0x02": "Request",
+        "0x03": "BIST",
+        "0x04": "Source_Abort",
+        "0x05": "Soft_Reset",
+        "0x06": "Reserved",
+        "0x07": "Ping",
+        "0x08": "PS_RDY",
+        "0x09": "Get_Source_Cap",
+        "0x0A": "Get_Sink_Cap",
+        "0x0B": "DR_Swap",
+        "0x0C": "PR_Swap",
+        "0x0D": "VCONN_Swap",
+        "0x0E": "Wait_Message",
+        "0x0F": "Reserved"
+      }
+    },
+    {
+      "id": "jtag",
+      "name": "JTAG",
+      "description": "Monitor JTAG debug interface",
+      "decoder": "jtag",
+      "channels": {
+        "tck": "D0",
+        "tms": "D1",
+        "tdi": "D2",
+        "tdo": "D3"
+      },
+      "states": [
+        "Test-Logic-Reset",
+        "Run-Test/Idle",
+        "Select-DR-Scan",
+        "Capture-DR",
+        "Shift-DR",
+        "Exit1-DR",
+        "Pause-DR",
+        "Exit2-DR",
+        "Update-DR",
+        "Select-IR-Scan",
+        "Capture-IR",
+        "Shift-IR",
+        "Exit1-IR",
+        "Pause-IR",
+        "Exit2-IR",
+        "Update-IR"
+      ]
+    },
+    {
+      "id": "swd",
+      "name": "SWD (Serial Wire Debug)",
+      "description": "Monitor ARM SWD debug interface",
+      "decoder": "arm_swd",
+      "channels": {
+        "swclk": "D0",
+        "swdio": "D1"
+      },
+      "commands": {
+        "0x00": "APRead",
+        "0x01": "APWrite",
+        "0x02": "DPRead",
+        "0x03": "DPWrite"
+      }
+    }
+  ],
+  "trigger_profiles": {
+    "power_on": {
+      "description": "Trigger on power-on sequence",
+      "channel": "D0",
+      "edge": "rising",
+      "threshold": 1.65
+    },
+    "i2c_start": {
+      "description": "Trigger on I2C start condition",
+      "channel": "D0",
+      "edge": "falling",
+      "condition": "scl_high"
+    },
+    "uart_tx": {
+      "description": "Trigger on UART transmission",
+      "channel": "D0",
+      "edge": "falling",
+      "condition": "idle_to_start"
+    },
+    "usb_pd_activity": {
+      "description": "Trigger on USB-PD activity",
+      "channel": "D0",
+      "edge": "any",
+      "pattern": "bmc"
+    }
+  }
+}

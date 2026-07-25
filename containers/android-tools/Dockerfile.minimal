@@ -1,0 +1,16 @@
+FROM alpine:3.20
+
+LABEL maintainer="HybridBench OS"
+LABEL description="Android device servicing tools (minimal)"
+LABEL stage="dev"
+
+RUN mkdir -p /workspace /logs /opt/tools /opt/tools/adb-enhanced /opt/tools/fastboot-enhanced /opt/tools/device-db
+
+COPY enhanced-adb/ /opt/tools/adb-enhanced/
+COPY enhanced-fastboot/ /opt/tools/fastboot-enhanced/
+COPY device-db/ /opt/tools/device-db/
+COPY entrypoint.sh /opt/entrypoint.sh
+RUN chmod +x /opt/entrypoint.sh
+
+VOLUME ["/workspace", "/logs"]
+ENTRYPOINT ["/opt/entrypoint.sh"]

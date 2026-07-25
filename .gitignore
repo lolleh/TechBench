@@ -1,0 +1,71 @@
+# OS
+*.iso
+*.img
+*.raw
+
+# Build artifacts
+build/
+target/
+*.deb
+*.rpm
+*.AppImage
+
+# Containers
+*.tar
+*.tar.gz
+
+# Persistence
+persistence/
+*.squashfs
+
+# Dependencies
+node_modules/
+vendor/
+target/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets
+*.pem
+*.key
+*.crt
+credentials.json
+
+# Hardware design backups
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*-backups/
+
+# Compiled
+*.o
+*.ko
+*.so
+*.dylib
+*.dll
+
+# Generated
+*.gen.ts
+*.gen.js

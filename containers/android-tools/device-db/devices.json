@@ -1,0 +1,83 @@
+{
+  "devices": {
+    "google": [
+      {
+        "name": "Pixel 6",
+        "codename": "oriole",
+        "vid": "18d1",
+        "pid": "4ee7",
+        "fastboot_pid": "4ee0",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "soc": "Google Tensor G1",
+        "partitions": ["boot", "system", "vendor", "dtbo", "vbmeta", "recovery"],
+        "flash_methods": ["fastboot", "edl"],
+        "notes": "Requires OEM unlock for bootloader"
+      },
+      {
+        "name": "Pixel 7",
+        "codename": "panther",
+        "vid": "18d1",
+        "pid": "4ee7",
+        "fastboot_pid": "4ee0",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "soc": "Google Tensor G2",
+        "partitions": ["boot", "system", "vendor", "dtbo", "vbmeta", "recovery"],
+        "flash_methods": ["fastboot", "edl"],
+        "notes": "Requires OEM unlock for bootloader"
+      },
+      {
+        "name": "Pixel 8",
+        "codename": "shiba",
+        "vid": "18d1",
+        "pid": "4ee7",
+        "fastboot_pid": "4ee0",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "soc": "Google Tensor G3",
+        "partitions": ["boot", "system", "vendor", "dtbo", "vbmeta", "recovery"],
+        "flash_methods": ["fastboot", "edl"],
+        "notes": "Requires OEM unlock for bootloader"
+      }
+    ],
+    "samsung": [
+      {
+        "name": "Galaxy S23",
+        "codename": "SM-S911B",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "notes": "Use Odin or Heimdall for flashing"
+      }
+    ],
+    "xiaomi": [
+      {
+        "name": "Redmi Note 12",
+        "codename": "topaz",
+        "vid": "18d1",
+        "pid": "4ee7",
+        "fastboot_pid": "4ee0",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "soc": "Qualcomm Snapdragon 685",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "notes": "Xiaomi-specific fastboot commands may be needed"
+      }
+    ]
+  },
+  "test_points": {
+    "qualcomm": [
+      {"name": "EDL Test Point", "description": "Short to enter EDL mode", "location": "Near USB connector"},
+      {"name": "UART TX/RX", "description": "Serial debug output", "location": "Near PMIC"}
+    ],
+    "mediatek": [
+      {"name": "UART TX/RX", "description": "Serial debug output", "location": "Near SoC"},
+      {"name": "Watchdog", "description": "WDT disable", "location": "Near PMIC"}
+    ]
+  }
+}
