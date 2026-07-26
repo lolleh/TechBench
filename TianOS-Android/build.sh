@@ -14,7 +14,14 @@ TOOLS_DIR="$SCRIPT_DIR/tools"
 ROOTFS_DIR="$SCRIPT_DIR/rootfs"
 
 VERSION="0.1"
-GSI_URL="https://github.com/nicknormandin/GSI-Images/releases/download/Android-15-GSI/system-arm64-ab-squeez-arm64-ab-14.0-20240916.img.xz"
+
+# Working GSI URLs for Lenovo Tab M11 (ARM64, A/B device)
+# A15 GSIs confirmed working on TB330FU
+GSI_URLS=(
+    "https://dl.google.com/developers/gsi/gsi_gms_arm64-exp-BP11.241210.004-12926906-3af5521f.zip"
+    "https://dl.google.com/developers/gsi/aosp_arm64-exp-BP11.241210.004-12926906-ac28fd4c.zip"
+    "https://github.com/nicknormandin/GSI-Images/releases/download/Android-15-GSI/system-arm64-ab-squeez-arm64-ab-14.0-20240916.img.xz"
+)
 GSI_FILE="system-arm64-ab.img"
 FLASHABLE_NAME="TianOS-v${VERSION}.zip"
 
@@ -96,19 +103,27 @@ download_gsi() {
         return
     fi
     
-    # Try multiple GSI sources
-    local gsi_urls=(
-        "https://github.com/nicknormandin/GSI-Images/releases/download/Android-15-GSI/system-arm64-ab-squeez-arm64-ab-14.0-20240916.img.xz"
-        "https://github.com/nicknormandin/GSI-Images/releases/download/Android-14-GSI/system-arm64-ab-arm64-ab-14.0-20231016.img.xz"
-    )
-    
-    for url in "${gsi_urls[@]}"; do
+    # Try multiple GSI sources (A15 confirmed working on Tab M11)
+    for url in "${GSI_URLS[@]}"; do
         log "Trying: $url"
-        if wget -q --show-progress -O "$BUILD_DIR/gsi.img.xz" "$url" 2>/dev/null; then
+        if wget -q --show-progress -O "$BUILD_DIR/gsi-download.zip" "$url" 2>/dev/null; then
             log "Download successful, extracting..."
-            unxz "$BUILD_DIR/gsi.img.xz"
-            mv "$BUILD_DIR/gsi.img" "$BUILD_DIR/$GSI_FILE"
-            return
+            
+            # Check if it's a zip or xz file
+            if file "$BUILD_DIR/gsi-download.zip" | grep -q "Zip"; then
+                unzip -q "$BUILD_DIR/gsi-download.zip" -d "$BUILD_DIR/gsi-extract"
+                # Find the system.img file
+                find "$BUILD_DIR/gsi-extract" -name "*.img" -exec mv {} "$BUILD_DIR/$GSI_FILE" \;
+                rm -rf "$BUILD_DIR/gsi-extract" "$BUILD_DIR/gsi-download.zip"
+            elif file "$BUILD_DIR/gsi-download.zip" | grep -q "XZ"; then
+                mv "$BUILD_DIR/gsi-download.zip" "$BUILD_DIR/gsi.img.xz"
+                unxz "$BUILD_DIR/gsi.img.xz"
+                mv "$BUILD_DIR/gsi.img" "$BUILD_DIR/$GSI_FILE"
+            fi
+            
+            if [ -f "$BUILD_DIR/$GSI_FILE" ]; then
+                return
+            fi
         fi
     done
     
