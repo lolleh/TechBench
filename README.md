@@ -60,8 +60,32 @@ Built with Tauri + React for the GUI, Rust for the Hardware Abstraction Layer, P
 # Install from .deb package
 sudo dpkg -i dist/techbench_0.1.0_amd64.deb
 
-# Or run from source
-cd gui && npm install && npm run dev
+# Or run from source (3 options below)
+```
+
+**Option 1 — Python server (recommended for device testing):**
+
+```bash
+cd portable
+python3 server.py
+# Open http://localhost:1420 in browser
+```
+
+**Option 2 — Vite dev server (development with hot reload):**
+
+```bash
+cd gui
+npm install
+npm run dev
+# Open http://localhost:1420 in browser
+```
+
+**Option 3 — Build and serve (production):**
+
+```bash
+cd gui && npm run build
+cd ../portable && python3 server.py
+# Open http://localhost:1420 in browser
 ```
 
 ### Build Native Windows Installer
@@ -208,15 +232,19 @@ techbench           # Launch
 ### Option 4: From Source (Any Platform)
 
 ```bash
-git clone https://github.com/yourusername/tech-bench-os.git
-cd tech-bench-os
+git clone https://github.com/lolleh/TechBench.git
+cd TechBench
 
-# GUI
+# GUI only (Vite dev server)
 cd gui
 npm install
 npm run dev          # Development server at http://localhost:1420
 
-# HAL (Rust)
+# Full application with device detection (Python server)
+cd ../portable
+python3 server.py    # Serves frontend + API at http://localhost:1420
+
+# HAL (Rust) — requires Rust toolchain
 cd ../hal
 cargo build
 
