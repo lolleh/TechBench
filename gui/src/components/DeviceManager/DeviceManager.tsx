@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useDeviceStore } from '../../lib/deviceStore'
 import { tauri } from '../../lib/tauri'
 import type { Device, DeviceOperation, OperationExecution, OperationStatus } from '../../lib/types'
+import { AppManager } from '../AppManager/AppManager'
 
 const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   android: { bg: 'bg-neon-green/10', text: 'text-neon-green', border: 'border-neon-green/20' },
@@ -177,7 +178,7 @@ export function DeviceManager() {
   const devices = useDeviceStore((s) => s.devices)
   const selectedDeviceId = useDeviceStore((s) => s.selectedDeviceId)
   const selectDevice = useDeviceStore((s) => s.selectDevice)
-  const [activeTab, setActiveTab] = useState<'info' | 'operations' | 'tools'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'operations' | 'tools' | 'apps'>('info')
   const [operationStatuses, setOperationStatuses] = useState<Record<string, OperationExecution>>({})
   const [activeOperation, setActiveOperation] = useState<string | null>(null)
 
@@ -357,6 +358,7 @@ export function DeviceManager() {
               {[
                 { id: 'info' as const, label: 'Info' },
                 { id: 'operations' as const, label: `Operations (${getAvailableOperations(selectedDevice).length})` },
+                { id: 'apps' as const, label: 'Apps' },
                 { id: 'tools' as const, label: 'Tools' },
               ].map((tab) => (
                 <button
@@ -530,6 +532,13 @@ export function DeviceManager() {
                     </pre>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Apps Tab */}
+            {activeTab === 'apps' && (
+              <div className="animate-fade-in h-[calc(100vh-280px)]">
+                <AppManager deviceSerial={selectedDevice.serial} />
               </div>
             )}
 

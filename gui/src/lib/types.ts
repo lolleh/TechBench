@@ -159,6 +159,39 @@ export interface OperationExecution {
   error?: string
 }
 
+export interface InstalledApp {
+  id: string
+  packageName: string
+  appName: string
+  version: string
+  versionCode: number
+  size: number
+  installDate: string
+  updateDate: string | null
+  isSystem: boolean
+  isDisabled: boolean
+  isUpdated: boolean
+  permissions: string[]
+  apkPath: string
+  dataPath: string
+  targetSdk: number
+  minSdk: number
+}
+
+export type AppAction = 'uninstall' | 'force_uninstall' | 'disable' | 'enable' | 'clear_data' | 'force_stop' | 'upgrade'
+
+export interface AppActionExecution {
+  id: string
+  appPackage: string
+  action: AppAction
+  status: OperationStatus
+  progress: number
+  output: string
+  startTime?: Date
+  endTime?: Date
+  error?: string
+}
+
 export interface DeviceHistoryEntry {
   id: string
   timestamp: Date
