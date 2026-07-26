@@ -15,12 +15,50 @@ import { DeviceHealthCheck } from './components/DeviceHealth/DeviceHealth'
 import { BatchOperations } from './components/BatchOperations/BatchOperations'
 import { FirmwareLibrary } from './components/FirmwareLibrary/FirmwareLibrary'
 import { SettingsView } from './components/Settings/Settings'
+import { tauri } from './lib/tauri'
+import { useDeviceStore } from './lib/deviceStore'
 
 type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'settings'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('devices')
   const [time, setTime] = useState(new Date())
+  const addDevice = useDeviceStore((s) => s.addDevice)
+  const removeDevice = useDeviceStore((s) => s.removeDevice)
+  const devices = useDeviceStore((s) => s.devices)
+
+  // Poll for connected devices
+  useEffect(() => {
+    const pollDevices = async () => {
+      const connectedDevices = await tauri.fetchDevices()
+      
+      // Get current device IDs
+      const currentIds = new Set(devices.map((d) => d.id))
+      const newIds = new Set(connectedDevices.map((d) => d.id))
+      
+      // Add new devices
+      for (const device of connectedDevices) {
+        if (!currentIds.has(device.id)) {
+          addDevice(device)
+        }
+      }
+      
+      // Remove disconnected devices
+      for (const device of devices) {
+        if (!newIds.has(device.id)) {
+          removeDevice(device.id)
+        }
+      }
+    }
+
+    // Initial poll
+    pollDevices()
+    
+    // Poll every 2 seconds
+    const interval = setInterval(pollDevices, 2000)
+    
+    return () => clearInterval(interval)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)

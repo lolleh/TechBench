@@ -1,12 +1,67 @@
-import type { Device, PowerReading } from './types'
+import type { Device, DeviceType, BootMode, PowerReading } from './types'
 
 let psuOn = false
 let psuVoltage = 4.2
 let psuCurrentLimit = 2.0
 
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? `http://${window.location.hostname}:${window.location.port || '1420'}`
+  : ''
+
 export const tauri = {
   invoke: async (cmd: string, args?: Record<string, unknown>): Promise<unknown> => {
+    // Try to use real API if available
+    if (API_BASE && cmd === 'list_usb_devices') {
+      try {
+        const response = await fetch(`${API_BASE}/api/devices`)
+        if (response.ok) {
+          return await response.json()
+        }
+      } catch {
+        // Fall through to mock
+      }
+    }
     return mockInvoke(cmd, args)
+  },
+  fetchDevices: async (): Promise<Device[]> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/devices`)
+        if (response.ok) {
+          const data = await response.json() as Array<Record<string, unknown>>
+          return data.map((d) => ({
+            id: d.id as string,
+            vendorId: (d.vendorId as string) || '0000',
+            productId: (d.productId as string) || '0000',
+            vendorName: (d.vendorName as string) || 'Unknown',
+            productName: (d.productName as string) || 'Unknown Device',
+            deviceType: (d.deviceType as DeviceType) || 'android',
+            bootMode: (d.bootMode as BootMode) || 'normal',
+            tools: d.mode === 'fastboot' ? ['fastboot', 'adb'] : ['adb'],
+            container: null,
+            status: 'connected' as const,
+            serial: (d.serial as string) || null,
+            chipset: (d.chipset as string) || null,
+            workspacePath: '',
+            capabilities: {
+              canFlash: d.mode === 'fastboot',
+              canReadInfo: true,
+              canBackup: d.mode === 'adb',
+              canRestore: d.mode === 'fastboot',
+              canUnlockBootloader: d.mode === 'fastboot',
+              canIsp: false,
+              canJtag: false,
+              supportedProtocols: d.mode === 'fastboot' ? ['fastboot'] : ['adb'],
+            },
+            firstSeen: new Date(),
+            lastSeen: new Date(),
+          }))
+        }
+      } catch {
+        // API not available
+      }
+    }
+    return []
   },
 }
 

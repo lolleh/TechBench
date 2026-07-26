@@ -52,6 +52,9 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         # API: List USB devices
         elif self.path == "/api/usb":
             self._send_json(self._list_usb_devices())
+        # API: List ADB/Fastboot devices
+        elif self.path == "/api/devices":
+            self._send_json(self._list_adb_devices())
         # API: Database status
         elif self.path == "/api/database":
             db_file = DB_DIR / "techbench.db"
@@ -134,6 +137,121 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         except Exception:
             pass
         return devices
+
+    def _list_adb_devices(self):
+        """List ADB and Fastboot devices with details"""
+        devices = []
+        
+        # Check for ADB
+        try:
+            result = subprocess.run(
+                ["adb", "devices", "-l"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=0x08000000 if platform.system() == "Windows" else 0
+            )
+            if result.returncode == 0:
+                for line in result.stdout.strip().split("\n")[1:]:  # Skip header
+                    if line and "\t" in line:
+                        parts = line.split()
+                        serial = parts[0]
+                        state = parts[1]
+                        
+                        # Get device properties
+                        props = self._get_adb_props(serial)
+                        
+                        devices.append({
+                            "id": serial,
+                            "serial": serial,
+                            "state": state,
+                            "mode": "adb",
+                            "productName": props.get("model", "Unknown"),
+                            "vendorName": props.get("brand", "Unknown"),
+                            "deviceType": "android",
+                            "androidVersion": props.get("android_version", ""),
+                            "chipset": props.get("hardware", ""),
+                            "bootMode": "normal",
+                        })
+        except FileNotFoundError:
+            pass  # ADB not installed
+        except Exception:
+            pass
+        
+        # Check for Fastboot
+        try:
+            result = subprocess.run(
+                ["fastboot", "devices"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=0x08000000 if platform.system() == "Windows" else 0
+            )
+            if result.returncode == 0:
+                for line in result.stdout.strip().split("\n"):
+                    if line and "\t" in line:
+                        serial = line.split()[0]
+                        
+                        # Get fastboot device info
+                        props = self._get_fastboot_props(serial)
+                        
+                        devices.append({
+                            "id": f"fastboot-{serial}",
+                            "serial": serial,
+                            "state": "fastboot",
+                            "mode": "fastboot",
+                            "productName": props.get("product", "Unknown"),
+                            "vendorName": props.get("manufacturer", "Unknown"),
+                            "deviceType": "android",
+                            "chipset": props.get("hardware", ""),
+                            "bootMode": "fastboot",
+                        })
+        except FileNotFoundError:
+            pass  # Fastboot not installed
+        except Exception:
+            pass
+        
+        return devices
+
+    def _get_adb_props(self, serial):
+        """Get ADB device properties"""
+        props = {}
+        try:
+            for prop, key in [
+                ("ro.product.model", "model"),
+                ("ro.product.brand", "brand"),
+                ("ro.product.manufacturer", "manufacturer"),
+                ("ro.hardware", "hardware"),
+                ("ro.build.version.release", "android_version"),
+            ]:
+                result = subprocess.run(
+                    ["adb", "-s", serial, "shell", "getprop", prop],
+                    capture_output=True, text=True, timeout=3,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0
+                )
+                if result.returncode == 0:
+                    props[key] = result.stdout.strip()
+        except Exception:
+            pass
+        return props
+
+    def _get_fastboot_props(self, serial):
+        """Get Fastboot device properties"""
+        props = {}
+        try:
+            for var, key in [
+                ("product", "product"),
+                ("manufacturer", "manufacturer"),
+                ("hardware", "hardware"),
+            ]:
+                result = subprocess.run(
+                    ["fastboot", "-s", serial, "getvar", var],
+                    capture_output=True, text=True, timeout=3,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.split("\n"):
+                        if f"{var}:" in line:
+                            props[key] = line.split(":")[1].strip()
+        except Exception:
+            pass
+        return props
 
     def log_message(self, format, *args):
         """Suppress log noise"""
