@@ -1,16 +1,6 @@
 import { useState } from 'react'
+import { useDeviceStore } from '../../lib/deviceStore'
 import type { DeviceHistoryEntry } from '../../lib/types'
-
-const MOCK_HISTORY: DeviceHistoryEntry[] = [
-  { id: '1', timestamp: new Date(Date.now() - 300000), deviceName: 'Lenovo Tab M11', vendorId: '17ef', productId: '6010', deviceType: 'android', bootMode: 'normal', serial: 'HT892XYZ', action: 'connected', details: 'USB Debug mode' },
-  { id: '2', timestamp: new Date(Date.now() - 250000), deviceName: 'Lenovo Tab M11', vendorId: '17ef', productId: '6010', deviceType: 'android', bootMode: 'fastboot', serial: 'HT892XYZ', action: 'flashed', details: 'Firmware v1.0.1 applied' },
-  { id: '3', timestamp: new Date(Date.now() - 200000), deviceName: 'Samsung Galaxy S24', vendorId: '04e8', productId: '6860', deviceType: 'samsung', bootMode: 'download', serial: 'RF8N90XXXXX', action: 'connected', details: 'Odin mode' },
-  { id: '4', timestamp: new Date(Date.now() - 180000), deviceName: 'Samsung Galaxy S24', vendorId: '04e8', productId: '6860', deviceType: 'samsung', bootMode: 'download', serial: 'RF8N90XXXXX', action: 'backed_up', details: 'Full NAND backup (128GB)' },
-  { id: '5', timestamp: new Date(Date.now() - 150000), deviceName: 'Lenovo Tab M11', vendorId: '17ef', productId: '6010', deviceType: 'android', bootMode: 'normal', serial: 'HT892XYZ', action: 'disconnected' },
-  { id: '6', timestamp: new Date(Date.now() - 100000), deviceName: 'Xiaomi Redmi Note 13', vendorId: '2717', productId: 'ff48', deviceType: 'android', bootMode: 'fastboot', serial: null, action: 'connected', details: 'Fastboot mode' },
-  { id: '7', timestamp: new Date(Date.now() - 90000), deviceName: 'Xiaomi Redmi Note 13', vendorId: '2717', productId: 'ff48', deviceType: 'android', bootMode: 'edl', serial: null, action: 'error', details: 'EDL auth required' },
-  { id: '8', timestamp: new Date(Date.now() - 50000), deviceName: 'Qualcomm QDLoader', vendorId: '05c6', productId: '90db', deviceType: 'qualcomm', bootMode: 'edl', serial: null, action: 'connected', details: 'Emergency Download mode' },
-]
 
 const TYPE_COLORS: Record<string, string> = {
   android: 'text-neon-green',
@@ -41,10 +31,24 @@ function formatTimeAgo(date: Date): string {
 }
 
 export function DeviceHistory() {
+  const devices = useDeviceStore((s) => s.devices)
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
 
-  const filtered = MOCK_HISTORY.filter((entry) => {
+  const history: DeviceHistoryEntry[] = devices.map((d) => ({
+    id: d.id,
+    timestamp: d.lastSeen || d.firstSeen || new Date(),
+    deviceName: d.productName,
+    vendorId: d.vendorId,
+    productId: d.productId,
+    deviceType: d.deviceType,
+    bootMode: d.bootMode,
+    serial: d.serial,
+    action: d.status === 'connected' ? 'connected' : 'disconnected',
+    details: d.bootMode !== 'unknown' ? `${d.bootMode} mode` : undefined,
+  }))
+
+  const filtered = history.filter((entry) => {
     if (filter !== 'all' && entry.action !== filter) return false
     if (search && !entry.deviceName.toLowerCase().includes(search.toLowerCase())) return false
     return true
@@ -59,24 +63,24 @@ export function DeviceHistory() {
         <div className="space-y-3">
           <div className="bg-surface-2/40 rounded-xl p-3 border border-white/5">
             <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Total Events</div>
-            <div className="text-2xl font-bold text-white/90">{MOCK_HISTORY.length}</div>
+            <div className="text-2xl font-bold text-white/90">{history.length}</div>
           </div>
           <div className="bg-surface-2/40 rounded-xl p-3 border border-white/5">
             <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Unique Devices</div>
             <div className="text-2xl font-bold text-neon-blue">
-              {new Set(MOCK_HISTORY.map((e) => `${e.vendorId}:${e.productId}`)).size}
+              {new Set(history.map((e) => `${e.vendorId}:${e.productId}`)).size}
             </div>
           </div>
           <div className="bg-surface-2/40 rounded-xl p-3 border border-white/5">
-            <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Flashes</div>
-            <div className="text-2xl font-bold text-neon-orange">
-              {MOCK_HISTORY.filter((e) => e.action === 'flashed').length}
+            <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Connected</div>
+            <div className="text-2xl font-bold text-neon-green">
+              {history.filter((e) => e.action === 'connected').length}
             </div>
           </div>
           <div className="bg-surface-2/40 rounded-xl p-3 border border-white/5">
-            <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Errors</div>
-            <div className="text-2xl font-bold text-red-400">
-              {MOCK_HISTORY.filter((e) => e.action === 'error').length}
+            <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Disconnected</div>
+            <div className="text-2xl font-bold text-white/50">
+              {history.filter((e) => e.action === 'disconnected').length}
             </div>
           </div>
         </div>
@@ -85,7 +89,7 @@ export function DeviceHistory() {
         <div className="mt-6">
           <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Filter by Action</div>
           <div className="flex flex-wrap gap-2">
-            {['all', 'connected', 'flashed', 'backed_up', 'error'].map((f) => (
+            {['all', 'connected', 'disconnected'].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -95,7 +99,7 @@ export function DeviceHistory() {
                     : 'bg-surface-2/40 text-white/40 border-white/5 hover:text-white/60'
                 }`}
               >
-                {f === 'all' ? 'All' : f.replace('_', ' ')}
+                {f === 'all' ? 'All' : f}
               </button>
             ))}
           </div>
@@ -116,46 +120,58 @@ export function DeviceHistory() {
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar">
-          <div className="relative">
-            {/* Timeline line */}
-            <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+              <div className="w-16 h-16 rounded-2xl bg-surface-3/50 flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-white/15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm text-white/40 mb-1">No device history</p>
+              <p className="text-xs text-white/20">Connect a device to start tracking</p>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
 
-            <div className="space-y-1">
-              {filtered.map((entry) => {
-                const colors = ACTION_COLORS[entry.action]
-                return (
-                  <div key={entry.id} className="relative flex items-start gap-4 p-3 rounded-xl hover:bg-surface-2/30 transition-colors group">
-                    {/* Timeline dot */}
-                    <div className={`relative z-10 w-5 h-5 rounded-full ${colors.bg} flex items-center justify-center shrink-0 mt-0.5 border border-white/5`}>
-                      <div className={`w-2 h-2 rounded-full ${colors.text.replace('text-', 'bg-')}`} />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm text-white/80 truncate">{entry.deviceName}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${colors.bg} ${colors.text} border border-white/5 capitalize`}>
-                          {entry.action.replace('_', ' ')}
-                        </span>
+              <div className="space-y-1">
+                {filtered.map((entry) => {
+                  const colors = ACTION_COLORS[entry.action] || ACTION_COLORS.connected
+                  return (
+                    <div key={entry.id} className="relative flex items-start gap-4 p-3 rounded-xl hover:bg-surface-2/30 transition-colors group">
+                      {/* Timeline dot */}
+                      <div className={`relative z-10 w-5 h-5 rounded-full ${colors.bg} flex items-center justify-center shrink-0 mt-0.5 border border-white/5`}>
+                        <div className={`w-2 h-2 rounded-full ${colors.text.replace('text-', 'bg-')}`} />
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-white/40">
-                        <span className="font-mono">{entry.vendorId}:{entry.productId}</span>
-                        <span className={TYPE_COLORS[entry.deviceType]}>{entry.deviceType}</span>
-                        {entry.serial && <span className="font-mono">SN: {entry.serial}</span>}
-                        {entry.bootMode !== 'unknown' && (
-                          <span className="px-1.5 py-0.5 rounded bg-surface-3/60 border border-white/5">{entry.bootMode}</span>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm text-white/80 truncate">{entry.deviceName}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${colors.bg} ${colors.text} border border-white/5 capitalize`}>
+                            {entry.action}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-white/40">
+                          <span className="font-mono">{entry.vendorId}:{entry.productId}</span>
+                          <span className={TYPE_COLORS[entry.deviceType] || 'text-white/50'}>{entry.deviceType}</span>
+                          {entry.serial && <span className="font-mono">SN: {entry.serial}</span>}
+                          {entry.bootMode !== 'unknown' && (
+                            <span className="px-1.5 py-0.5 rounded bg-surface-3/60 border border-white/5">{entry.bootMode}</span>
+                          )}
+                        </div>
+                        {entry.details && (
+                          <div className="text-[11px] text-white/30 mt-1">{entry.details}</div>
                         )}
                       </div>
-                      {entry.details && (
-                        <div className="text-[11px] text-white/30 mt-1">{entry.details}</div>
-                      )}
-                    </div>
 
-                    <div className="text-[10px] text-white/20 font-mono shrink-0">{formatTimeAgo(entry.timestamp)}</div>
-                  </div>
-                )
-              })}
+                      <div className="text-[10px] text-white/20 font-mono shrink-0">{formatTimeAgo(entry.timestamp)}</div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

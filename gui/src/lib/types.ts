@@ -242,7 +242,7 @@ export interface DeviceHealth {
 export interface BatchJob {
   id: string
   name: string
-  type: 'flash' | 'backup' | 'unlock' | 'custom'
+  type: 'flash' | 'backup' | 'unlock' | 'wipe' | 'custom'
   deviceIds: string[]
   status: 'queued' | 'running' | 'complete' | 'error' | 'partial'
   progress: number

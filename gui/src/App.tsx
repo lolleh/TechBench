@@ -15,21 +15,12 @@ import { DeviceHealthCheck } from './components/DeviceHealth/DeviceHealth'
 import { BatchOperations } from './components/BatchOperations/BatchOperations'
 import { FirmwareLibrary } from './components/FirmwareLibrary/FirmwareLibrary'
 import { SettingsView } from './components/Settings/Settings'
-import { useDeviceStore } from './lib/deviceStore'
-import { startDeviceSimulation, stopDeviceSimulation } from './lib/mockDevices'
 
 type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'settings'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('devices')
   const [time, setTime] = useState(new Date())
-  const addDevice = useDeviceStore((s) => s.addDevice)
-  const removeDevice = useDeviceStore((s) => s.removeDevice)
-
-  useEffect(() => {
-    startDeviceSimulation(addDevice, removeDevice)
-    return () => stopDeviceSimulation()
-  }, [addDevice, removeDevice])
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)
