@@ -538,7 +538,7 @@ export function DeviceManager() {
             {/* Apps Tab */}
             {activeTab === 'apps' && (
               <div className="animate-fade-in h-[calc(100vh-280px)]">
-                <AppManager deviceSerial={selectedDevice.serial} />
+                <AppManager deviceSerial={selectedDevice.serial} deviceName={selectedDevice.productName} />
               </div>
             )}
 
