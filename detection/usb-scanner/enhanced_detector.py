@@ -54,6 +54,19 @@ class DeviceType(Enum):
     QUALCOMM = "qualcomm"
     MEDIATEK = "mediatek"
     SAMSUNG = "samsung"
+    XIAOMI = "xiaomi"
+    HUAWEI = "huawei"
+    OPPO = "oppo"
+    VIVO = "vivo"
+    MOTOROLA = "motorola"
+    LENOVO = "lenovo"
+    TECNO = "tecno"
+    ZTE = "zte"
+    SONY = "sony"
+    LG = "lg"
+    HTC = "htc"
+    ONEPLUS = "oneplus"
+    NOKIA = "nokia"
     GENERIC = "generic"
     UNKNOWN = "unknown"
 
@@ -147,8 +160,17 @@ class DetectedDevice:
 class ChipsetDatabase:
     """Enhanced chipset database with detailed device information"""
     
-    def __init__(self, db_path: str = "/opt/techbench/detection/chipset-id/database.json"):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path: str = None):
+        if db_path:
+            self.db_path = Path(db_path)
+        else:
+            # Try relative to this script first
+            script_dir = Path(__file__).parent
+            local_db = script_dir.parent / "chipset-id" / "database.json"
+            if local_db.exists():
+                self.db_path = local_db
+            else:
+                self.db_path = Path("/opt/techbench/detection/chipset-id/database.json")
         self.database = self._load_database()
         self.vendor_names = self._build_vendor_map()
     
@@ -230,6 +252,175 @@ class ChipsetDatabase:
                     "can_flash": True,
                     "can_read_info": True,
                     "can_unlock_bootloader": True,
+                    "supported_protocols": ["fastboot"]
+                }
+            },
+            "2717:ff48": {
+                "vendor": "xiaomi",
+                "chipset": "snapdragon",
+                "name": "Xiaomi (Fastboot)",
+                "description": "Xiaomi device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "miflash", "adb"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "can_unlock_bootloader": True,
+                    "supported_protocols": ["fastboot", "miflash"]
+                }
+            },
+            "2717:ff40": {
+                "vendor": "xiaomi",
+                "chipset": "mtk",
+                "name": "Xiaomi (MediaTek)",
+                "description": "Xiaomi MediaTek device",
+                "boot_modes": ["preloader"],
+                "tools": ["sp-flash-tool", "mtkclient"],
+                "container": "mediatek-flash",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["mtk_preloader"]
+                }
+            },
+            "17ef:6009": {
+                "vendor": "lenovo",
+                "chipset": "qualcomm",
+                "name": "Lenovo Tab M10 (USB Debug)",
+                "description": "Lenovo Tab M10 series in ADB mode",
+                "boot_modes": ["normal", "fastboot"],
+                "tools": ["adb", "fastboot"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["adb", "fastboot"]
+                }
+            },
+            "17ef:6011": {
+                "vendor": "lenovo",
+                "chipset": "qualcomm",
+                "name": "Lenovo Tab P11 (USB Debug)",
+                "description": "Lenovo Tab P11 series in ADB mode",
+                "boot_modes": ["normal", "fastboot"],
+                "tools": ["adb", "fastboot"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["adb", "fastboot"]
+                }
+            },
+            "17ef:6012": {
+                "vendor": "lenovo",
+                "chipset": "qualcomm",
+                "name": "Lenovo Tab P12 (USB Debug)",
+                "description": "Lenovo Tab P12 series in ADB mode",
+                "boot_modes": ["normal", "fastboot"],
+                "tools": ["adb", "fastboot"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["adb", "fastboot"]
+                }
+            },
+            "22d9:2765": {
+                "vendor": "oppo",
+                "chipset": "qualcomm",
+                "name": "OPPO (Fastboot)",
+                "description": "OPPO device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "adb"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["fastboot"]
+                }
+            },
+            "2a70:9093": {
+                "vendor": "realme",
+                "chipset": "qualcomm",
+                "name": "Realme (Fastboot)",
+                "description": "Realme device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "adb"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["fastboot"]
+                }
+            },
+            "2d95:5a01": {
+                "vendor": "vivo",
+                "chipset": "qualcomm",
+                "name": "Vivo (Fastboot)",
+                "description": "Vivo device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "adb"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["fastboot"]
+                }
+            },
+            "22b8:2e24": {
+                "vendor": "motorola",
+                "chipset": "qualcomm",
+                "name": "Motorola (Fastboot)",
+                "description": "Motorola device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "adb"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["fastboot"]
+                }
+            },
+            "12d1:0001": {
+                "vendor": "huawei",
+                "chipset": "kirin",
+                "name": "Huawei/Honor (Fastboot)",
+                "description": "Huawei or Honor device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "adb", "hisuite"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["fastboot", "hisuite"]
+                }
+            },
+            "25c7:0013": {
+                "vendor": "tecno",
+                "chipset": "mediatek",
+                "name": "Tecno/Infinix/ITEL (Preloader)",
+                "description": "Tecno, Infinix, or ITEL device in preloader mode",
+                "boot_modes": ["preloader"],
+                "tools": ["sp-flash-tool", "mtkclient"],
+                "container": "mediatek-flash",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
+                    "supported_protocols": ["mtk_preloader"]
+                }
+            },
+            "19d2:0001": {
+                "vendor": "zte",
+                "chipset": "qualcomm",
+                "name": "ZTE/Nubia (Fastboot)",
+                "description": "ZTE or Nubia device in fastboot mode",
+                "boot_modes": ["fastboot"],
+                "tools": ["fastboot", "adb"],
+                "container": "android-tools",
+                "capabilities": {
+                    "can_flash": True,
+                    "can_read_info": True,
                     "supported_protocols": ["fastboot"]
                 }
             }
@@ -413,6 +604,32 @@ class DeviceDetector:
             return DeviceType.APPLE
         elif 'google' in vendor_lower or 'pixel' in product_lower:
             return DeviceType.ANDROID
+        elif 'xiaomi' in vendor_lower or 'redmi' in vendor_lower or 'poco' in vendor_lower:
+            return DeviceType.XIAOMI
+        elif 'huawei' in vendor_lower or 'honor' in vendor_lower:
+            return DeviceType.HUAWEI
+        elif 'oppo' in vendor_lower or 'realme' in vendor_lower:
+            return DeviceType.OPPO
+        elif 'vivo' in vendor_lower or 'iqoo' in vendor_lower:
+            return DeviceType.VIVO
+        elif 'motorola' in vendor_lower or 'moto' in vendor_lower:
+            return DeviceType.MOTOROLA
+        elif 'lenovo' in vendor_lower or 'tab' in product_lower:
+            return DeviceType.LENOVO
+        elif 'tecno' in vendor_lower or 'infinix' in vendor_lower or 'itel' in vendor_lower:
+            return DeviceType.TECNO
+        elif 'zte' in vendor_lower or 'nubia' in vendor_lower:
+            return DeviceType.ZTE
+        elif 'sony' in vendor_lower or 'xperia' in product_lower:
+            return DeviceType.SONY
+        elif 'lg' in vendor_lower:
+            return DeviceType.LG
+        elif 'htc' in vendor_lower:
+            return DeviceType.HTC
+        elif 'oneplus' in vendor_lower:
+            return DeviceType.ONEPLUS
+        elif 'nokia' in vendor_lower:
+            return DeviceType.NOKIA
         elif 'android' in product_lower:
             return DeviceType.ANDROID
         
@@ -425,6 +642,19 @@ class DeviceDetector:
             DeviceType.SAMSUNG: 'samsung-odin',
             DeviceType.APPLE: 'apple-tools',
             DeviceType.ANDROID: 'android-tools',
+            DeviceType.XIAOMI: 'android-tools',
+            DeviceType.HUAWEI: 'android-tools',
+            DeviceType.OPPO: 'android-tools',
+            DeviceType.VIVO: 'android-tools',
+            DeviceType.MOTOROLA: 'android-tools',
+            DeviceType.LENOVO: 'android-tools',
+            DeviceType.TECNO: 'android-tools',
+            DeviceType.ZTE: 'android-tools',
+            DeviceType.SONY: 'android-tools',
+            DeviceType.LG: 'android-tools',
+            DeviceType.HTC: 'android-tools',
+            DeviceType.ONEPLUS: 'android-tools',
+            DeviceType.NOKIA: 'android-tools',
         }
         return container_map.get(device_type, 'android-tools')
     
@@ -435,6 +665,19 @@ class DeviceDetector:
             DeviceType.SAMSUNG: ['heimdall', 'odin'],
             DeviceType.APPLE: ['idevicerestore', 'libimobiledevice'],
             DeviceType.ANDROID: ['adb', 'fastboot'],
+            DeviceType.XIAOMI: ['adb', 'fastboot', 'miflash'],
+            DeviceType.HUAWEI: ['adb', 'fastboot', 'hisuite'],
+            DeviceType.OPPO: ['adb', 'fastboot'],
+            DeviceType.VIVO: ['adb', 'fastboot'],
+            DeviceType.MOTOROLA: ['adb', 'fastboot'],
+            DeviceType.LENOVO: ['adb', 'fastboot'],
+            DeviceType.TECNO: ['adb', 'fastboot'],
+            DeviceType.ZTE: ['adb', 'fastboot'],
+            DeviceType.SONY: ['adb', 'fastboot'],
+            DeviceType.LG: ['adb', 'fastboot'],
+            DeviceType.HTC: ['adb', 'fastboot'],
+            DeviceType.ONEPLUS: ['adb', 'fastboot'],
+            DeviceType.NOKIA: ['adb', 'fastboot'],
         }
         return tools_map.get(device_type, ['adb'])
     

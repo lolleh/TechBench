@@ -25,27 +25,48 @@ def test_chipset_database():
     # Test database loading
     print(f"[✓] Database loaded with {len(db.database)} entries")
     
-    # Test lookup
+    # Test lookup for all major brands
     test_cases = [
-        ("05c6", "90db"),  # Qualcomm EDL
-        ("0e8d", "0003"),  # MediaTek Preloader
-        ("04e8", "6860"),  # Samsung Download
-        ("05ac", "1227"),  # Apple DFU
-        ("18d1", "4ee7"),  # Google Pixel Fastboot
+        ("05c6", "90db", "Qualcomm EDL"),
+        ("0e8d", "0003", "MediaTek Preloader"),
+        ("04e8", "6860", "Samsung Download"),
+        ("05ac", "1227", "Apple DFU"),
+        ("18d1", "4ee7", "Google Pixel Fastboot"),
+        ("2717", "ff48", "Xiaomi Fastboot"),
+        ("2717", "ff40", "Xiaomi MediaTek"),
+        ("17ef", "6009", "Lenovo Tab M10"),
+        ("17ef", "6011", "Lenovo Tab P11"),
+        ("17ef", "6012", "Lenovo Tab P12"),
+        ("22d9", "2765", "OPPO Fastboot"),
+        ("2a70", "9093", "Realme Fastboot"),
+        ("2d95", "5a01", "Vivo Fastboot"),
+        ("22b8", "2e24", "Motorola Fastboot"),
+        ("12d1", "0001", "Huawei/Honor Fastboot"),
+        ("25c7", "0013", "Tecno/Infinix/ITEL Preloader"),
+        ("19d2", "0001", "ZTE/Nubia Fastboot"),
     ]
     
-    for vid, pid in test_cases:
+    for vid, pid, expected_name in test_cases:
         result = db.lookup(vid, pid)
         if result:
-            print(f"[✓] {vid}:{pid} -> {result.get('name', 'Unknown')}")
+            print(f"[✓] {vid}:{pid} -> {result.get('name', 'Unknown')} ({expected_name})")
         else:
-            print(f"[✗] {vid}:{pid} -> Not found")
+            print(f"[✗] {vid}:{pid} -> Not found (expected: {expected_name})")
     
     # Test boot mode detection
     print("\nBoot Mode Detection:")
-    for vid, pid in test_cases:
+    for vid, pid, expected_name in test_cases:
         mode = db.detect_boot_mode(vid, pid)
         print(f"[✓] {vid}:{pid} -> {mode.value}")
+    
+    # Test capabilities
+    print("\nCapabilities:")
+    for vid, pid, expected_name in test_cases:
+        caps = db.get_capabilities(vid, pid)
+        if caps.can_flash:
+            print(f"[✓] {vid}:{pid} -> Can flash")
+        else:
+            print(f"[✗] {vid}:{pid} -> Cannot flash")
     
     print()
     return True
@@ -59,7 +80,7 @@ def test_device_types():
     
     from enhanced_detector import DeviceType, DetectedDevice, DeviceCapabilities, DeviceStatus
     
-    # Create test devices
+    # Create test devices for all major brands
     test_devices = [
         DetectedDevice(
             id="test1",
@@ -68,7 +89,7 @@ def test_device_types():
             vendor_name="Qualcomm",
             product_name="QDLoader 9008",
             device_type=DeviceType.QUALCOMM,
-            boot_mode=None,  # Will be set
+            boot_mode=None,
             status=DeviceStatus.CONNECTED,
             capabilities=DeviceCapabilities(),
         ),
@@ -79,6 +100,127 @@ def test_device_types():
             vendor_name="MediaTek",
             product_name="Preloader",
             device_type=DeviceType.MEDIATEK,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test3",
+            vendor_id="04e8",
+            product_id="6860",
+            vendor_name="Samsung",
+            product_name="Download Mode",
+            device_type=DeviceType.SAMSUNG,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test4",
+            vendor_id="05ac",
+            product_id="1227",
+            vendor_name="Apple",
+            product_name="DFU Mode",
+            device_type=DeviceType.APPLE,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test5",
+            vendor_id="2717",
+            product_id="ff48",
+            vendor_name="Xiaomi",
+            product_name="Fastboot",
+            device_type=DeviceType.XIAOMI,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test6",
+            vendor_id="17ef",
+            product_id="6009",
+            vendor_name="Lenovo",
+            product_name="Tab M10",
+            device_type=DeviceType.LENOVO,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test7",
+            vendor_id="22d9",
+            product_id="2765",
+            vendor_name="OPPO",
+            product_name="Fastboot",
+            device_type=DeviceType.OPPO,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test8",
+            vendor_id="2a70",
+            product_id="9093",
+            vendor_name="Realme",
+            product_name="Fastboot",
+            device_type=DeviceType.OPPO,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test9",
+            vendor_id="2d95",
+            product_id="5a01",
+            vendor_name="Vivo",
+            product_name="Fastboot",
+            device_type=DeviceType.VIVO,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test10",
+            vendor_id="22b8",
+            product_id="2e24",
+            vendor_name="Motorola",
+            product_name="Fastboot",
+            device_type=DeviceType.MOTOROLA,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test11",
+            vendor_id="12d1",
+            product_id="0001",
+            vendor_name="Huawei",
+            product_name="Fastboot",
+            device_type=DeviceType.HUAWEI,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test12",
+            vendor_id="25c7",
+            product_id="0013",
+            vendor_name="Tecno",
+            product_name="Preloader",
+            device_type=DeviceType.TECNO,
+            boot_mode=None,
+            status=DeviceStatus.CONNECTED,
+            capabilities=DeviceCapabilities(),
+        ),
+        DetectedDevice(
+            id="test13",
+            vendor_id="19d2",
+            product_id="0001",
+            vendor_name="ZTE",
+            product_name="Nubia Fastboot",
+            device_type=DeviceType.ZTE,
             boot_mode=None,
             status=DeviceStatus.CONNECTED,
             capabilities=DeviceCapabilities(),
