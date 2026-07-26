@@ -166,15 +166,17 @@
   },
   "17ef:6010": {
     "vendor": "lenovo",
-    "chipset": "qualcomm",
+    "chipset": "mediatek",
     "name": "Lenovo Tab M11 (USB Debug)",
-    "description": "Lenovo Tab M11 series in ADB mode",
+    "description": "Lenovo Tab M11 2024 with MediaTek Helio G88",
     "boot_modes": ["normal", "fastboot"],
     "tools": ["adb", "fastboot"],
     "container": "android-tools",
     "common_devices": [
-      "Lenovo Tab M11",
-      "Lenovo Tab M11 Plus"
+      "Lenovo Tab M11 (TB330FU)",
+      "Lenovo Tab M11 (TB330KU)",
+      "Lenovo Tab M11 (TB330XU)",
+      "Lenovo Tab K11"
     ]
   },
   "17ef:6011": {
@@ -409,14 +411,16 @@
   },
   "17ef:6029": {
     "vendor": "lenovo",
-    "chipset": "qualcomm",
+    "chipset": "mediatek",
     "name": "Lenovo Tab M11 (Gen 2)",
-    "description": "Lenovo Tab M11 Gen 2 in ADB mode",
+    "description": "Lenovo Tab M11 Gen 2 with MediaTek Helio G88",
     "boot_modes": ["normal", "fastboot"],
     "tools": ["adb", "fastboot"],
     "container": "android-tools",
     "common_devices": [
-      "Lenovo Tab M11 Gen 2"
+      "Lenovo Tab M11 Gen 2 (TB330FU)",
+      "Lenovo Tab M11 Gen 2 (TB330KU)",
+      "Lenovo Tab M11 Gen 2 (TB330XU)"
     ]
   },
   "17ef:6030": {
@@ -609,6 +613,57 @@
     "container": "android-tools",
     "common_devices": [
       "Lenovo Tab P12 Pro Gen 5"
+    ]
+  },
+  "17ef:6046": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 WiFi (TB330FU)",
+    "description": "Lenovo Tab M11 2024 WiFi-only model with MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 WiFi (TB330FU)",
+      "Lenovo Tab K11 WiFi"
+    ]
+  },
+  "17ef:6047": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 LTE (TB330KU)",
+    "description": "Lenovo Tab M11 2024 LTE model with MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 LTE (TB330KU)",
+      "Lenovo Tab K11 LTE"
+    ]
+  },
+  "17ef:6048": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 LTE with Pen (TB330XU)",
+    "description": "Lenovo Tab M11 2024 LTE model with Pen support, MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 LTE with Pen (TB330XU)",
+      "Lenovo Tab K11 LTE with Pen"
+    ]
+  },
+  "17ef:6049": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 Plus Gen 7",
+    "description": "Lenovo Tab M11 Plus Gen 7 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Plus Gen 7"
     ]
   },
   "22d9:2765": {

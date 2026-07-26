@@ -670,15 +670,114 @@
         "notes": "Tab M10, M10 FHD, M10 Plus, M10 HD"
       },
       {
-        "name": "Lenovo Tab M11 Series",
-        "codename": "Various",
+        "name": "Lenovo Tab M11 WiFi (TB330FU)",
+        "codename": "TB330FU",
         "vid": "17ef",
-        "pid": "6010",
-        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "pid": "6046",
+        "chipset": "MediaTek Helio G88 (MT6769H)",
         "partitions": ["boot", "system", "vendor", "recovery"],
         "flash_methods": ["fastboot"],
-        "functions": ["FRP", "Flash", "Screen Lock"],
-        "notes": "Tab M11, M11 Plus"
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "WiFi-only model, 2024"
+      },
+      {
+        "name": "Lenovo Tab M11 LTE (TB330KU)",
+        "codename": "TB330KU",
+        "vid": "17ef",
+        "pid": "6047",
+        "chipset": "MediaTek Helio G88 (MT6769H)",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "LTE model, 2024"
+      },
+      {
+        "name": "Lenovo Tab M11 LTE with Pen (TB330XU)",
+        "codename": "TB330XU",
+        "vid": "17ef",
+        "pid": "6048",
+        "chipset": "MediaTek Helio G88 (MT6769H)",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "LTE model with Tab Pen support, 2024"
+      },
+      {
+        "name": "Lenovo Tab M11 Gen 2",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6029",
+        "chipset": "MediaTek Helio G88",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "Gen 2 refresh"
+      },
+      {
+        "name": "Lenovo Tab M11 Plus Gen 4",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6027",
+        "chipset": "MediaTek Helio G88",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "M11 Plus Gen 4"
+      },
+      {
+        "name": "Lenovo Tab M11 Plus Gen 5",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6036",
+        "chipset": "MediaTek Helio G88",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "M11 Plus Gen 5"
+      },
+      {
+        "name": "Lenovo Tab M11 Plus Gen 6",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6041",
+        "chipset": "MediaTek Helio G88",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "M11 Plus Gen 6"
+      },
+      {
+        "name": "Lenovo Tab M11 Plus Gen 7",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6049",
+        "chipset": "MediaTek Helio G88",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "M11 Plus Gen 7"
+      },
+      {
+        "name": "Lenovo Tab K11 WiFi",
+        "codename": "TB330FU",
+        "vid": "17ef",
+        "pid": "6046",
+        "chipset": "MediaTek Helio G88 (MT6769H)",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "Tab K11 branding in some markets, WiFi-only"
+      },
+      {
+        "name": "Lenovo Tab K11 LTE",
+        "codename": "TB330KU",
+        "vid": "17ef",
+        "pid": "6047",
+        "chipset": "MediaTek Helio G88 (MT6769H)",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "ADB"],
+        "notes": "Tab K11 branding in some markets, LTE"
       },
       {
         "name": "Lenovo Tab P11 Series",
