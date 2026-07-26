@@ -1,6 +1,7 @@
+import { useState, useCallback } from 'react'
 import { useDeviceStore } from '../../lib/deviceStore'
 import { tauri } from '../../lib/tauri'
-import type { Device } from '../../lib/types'
+import type { Device, DeviceOperation, OperationExecution, OperationStatus } from '../../lib/types'
 
 const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   android: { bg: 'bg-neon-green/10', text: 'text-neon-green', border: 'border-neon-green/20' },
@@ -11,12 +12,239 @@ const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> 
   generic: { bg: 'bg-white/5', text: 'text-white/50', border: 'border-white/10' },
 }
 
+const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  security: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
+  system: { bg: 'bg-neon-orange/10', text: 'text-neon-orange', border: 'border-neon-orange/20' },
+  backup: { bg: 'bg-neon-blue/10', text: 'text-neon-blue', border: 'border-neon-blue/20' },
+  cloud: { bg: 'bg-neon-purple/10', text: 'text-neon-purple', border: 'border-neon-purple/20' },
+  network: { bg: 'bg-neon-green/10', text: 'text-neon-green', border: 'border-neon-green/20' },
+}
+
+const RISK_COLORS: Record<string, string> = {
+  LOW: 'text-neon-green',
+  MEDIUM: 'text-neon-yellow',
+  HIGH: 'text-red-400',
+}
+
+const STATUS_COLORS: Record<OperationStatus, { bg: string; text: string }> = {
+  idle: { bg: 'bg-white/5', text: 'text-white/40' },
+  running: { bg: 'bg-neon-blue/10', text: 'text-neon-blue' },
+  success: { bg: 'bg-neon-green/10', text: 'text-neon-green' },
+  error: { bg: 'bg-red-500/10', text: 'text-red-400' },
+  cancelled: { bg: 'bg-white/5', text: 'text-white/30' },
+}
+
+const ALL_OPERATIONS: DeviceOperation[] = [
+  // Security Operations
+  {
+    id: 'erase-frp',
+    name: 'Erase FRP',
+    description: 'Remove Factory Reset Protection lock from device',
+    category: 'security',
+    icon: 'shield',
+    command: 'adb shell content insert --uri content://settings/secure --bind name:s:user_setup_complete --bind value:s:1',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal', 'fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'unlock-bootloader',
+    name: 'Unlock Bootloader',
+    description: 'Unlock device bootloader for flashing custom firmware',
+    category: 'security',
+    icon: 'unlock',
+    command: 'fastboot oem unlock',
+    requiresUnlock: false,
+    riskLevel: 'HIGH',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'lock-bootloader',
+    name: 'Lock Bootloader',
+    description: 'Lock device bootloader for security',
+    category: 'security',
+    icon: 'lock',
+    command: 'fastboot oem lock',
+    requiresUnlock: true,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // System Operations
+  {
+    id: 'factory-reset',
+    name: 'Factory Reset',
+    description: 'Reset device to factory settings (erases all data)',
+    category: 'system',
+    icon: 'reset',
+    command: 'fastboot -w',
+    requiresUnlock: true,
+    riskLevel: 'HIGH',
+    supportedBootModes: ['fastboot', 'recovery'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'auth-flash',
+    name: 'Auth Flash',
+    description: 'Flash firmware with authentication bypass',
+    category: 'system',
+    icon: 'flash',
+    command: 'fastboot flashall',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['fastboot', 'edl'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'disable-ota',
+    name: 'Disable OTA',
+    description: 'Disable Over-The-Air updates permanently',
+    category: 'system',
+    icon: 'block',
+    command: 'adb shell pm disable-user --user 0 com.google.android.gms',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // Backup Operations
+  {
+    id: 'backup-efs',
+    name: 'Backup EFS',
+    description: 'Backup EFS partition (IMEI and radio data)',
+    category: 'backup',
+    icon: 'backup',
+    command: 'adb pull /dev/block/bootdevice/by-name/efs backup/efs.img',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal', 'fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'restore-efs',
+    name: 'Restore EFS',
+    description: 'Restore EFS partition from backup',
+    category: 'backup',
+    icon: 'restore',
+    command: 'adb push backup/efs.img /dev/block/bootdevice/by-name/efs',
+    requiresUnlock: true,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['normal', 'fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'wipe-efs',
+    name: 'Wipe EFS',
+    description: 'Wipe EFS partition (WARNING: may lose IMEI)',
+    category: 'backup',
+    icon: 'wipe',
+    command: 'fastboot erase efs',
+    requiresUnlock: true,
+    riskLevel: 'HIGH',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // Cloud Operations
+  {
+    id: 'reset-micloud',
+    name: 'Reset Mi Cloud',
+    description: 'Remove Mi Cloud account lock from Xiaomi devices',
+    category: 'cloud',
+    icon: 'cloud',
+    command: 'adb shell pm clear com.miui.cloudservice',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'xiaomi'],
+  },
+  {
+    id: 'remove-micloud',
+    name: 'Remove Mi Cloud',
+    description: 'Permanently remove Mi Cloud account from device',
+    category: 'cloud',
+    icon: 'cloud-remove',
+    command: 'adb shell pm uninstall --user 0 com.miui.cloudservice',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'xiaomi'],
+  },
+]
+
 export function DeviceManager() {
   const devices = useDeviceStore((s) => s.devices)
   const selectedDeviceId = useDeviceStore((s) => s.selectedDeviceId)
   const selectDevice = useDeviceStore((s) => s.selectDevice)
+  const [activeTab, setActiveTab] = useState<'info' | 'operations' | 'tools'>('info')
+  const [operationStatuses, setOperationStatuses] = useState<Record<string, OperationExecution>>({})
+  const [activeOperation, setActiveOperation] = useState<string | null>(null)
 
   const selectedDevice = devices.find((d) => d.id === selectedDeviceId) ?? null
+
+  const getAvailableOperations = useCallback((device: Device): DeviceOperation[] => {
+    return ALL_OPERATIONS.filter((op) => {
+      const bootModeMatch = op.supportedBootModes.includes(device.bootMode)
+      const typeMatch = op.supportedDeviceTypes.includes(device.deviceType) || op.supportedDeviceTypes.includes('android')
+      return bootModeMatch && typeMatch
+    })
+  }, [])
+
+  const handleRunOperation = useCallback(async (device: Device, operation: DeviceOperation) => {
+    const executionId = `${operation.id}-${device.id}-${Date.now()}`
+    setActiveOperation(executionId)
+
+    setOperationStatuses((prev) => ({
+      ...prev,
+      [executionId]: {
+        id: executionId,
+        operationId: operation.id,
+        deviceId: device.id,
+        status: 'running',
+        progress: 0,
+        output: `Starting ${operation.name}...\n`,
+        startTime: new Date(),
+      },
+    }))
+
+    // Simulate operation execution
+    const steps = [
+      'Connecting to device...',
+      'Checking device status...',
+      'Preparing operation...',
+      'Executing command...',
+      'Verifying result...',
+      'Operation complete!',
+    ]
+
+    for (let i = 0; i < steps.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 500))
+      setOperationStatuses((prev) => ({
+        ...prev,
+        [executionId]: {
+          ...prev[executionId],
+          progress: Math.round(((i + 1) / steps.length) * 100),
+          output: prev[executionId].output + `[${new Date().toLocaleTimeString()}] ${steps[i]}\n`,
+        },
+      }))
+    }
+
+    const success = Math.random() > 0.2
+    setOperationStatuses((prev) => ({
+      ...prev,
+      [executionId]: {
+        ...prev[executionId],
+        status: success ? 'success' : 'error',
+        progress: 100,
+        endTime: new Date(),
+        error: success ? undefined : 'Operation failed: Device not responding',
+        output: prev[executionId].output + (success ? '[OK] Success!\n' : '[ERROR] Operation failed!\n'),
+      },
+    }))
+
+    setActiveOperation(null)
+  }, [])
 
   const handleOpenShell = async (device: Device) => {
     await tauri.invoke('open_terminal', {
@@ -101,7 +329,7 @@ export function DeviceManager() {
                       {device.bootMode}
                     </span>
                     <span className="text-[10px] text-white/20 font-mono">
-                      {device.tools.length} tools
+                      {getAvailableOperations(device).length} ops
                     </span>
                   </div>
                 </button>
@@ -124,107 +352,233 @@ export function DeviceManager() {
               <div className={`status-dot ${selectedDevice.status === 'connected' ? 'status-connected' : 'status-disconnected'} w-3 h-3`} />
             </div>
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            {/* Tabs */}
+            <div className="flex gap-1 mb-6 bg-surface-2/40 rounded-xl p-1 border border-white/5">
               {[
-                { label: 'VID:PID', value: `${selectedDevice.vendorId}:${selectedDevice.productId}`, mono: true },
-                { label: 'Boot Mode', value: selectedDevice.bootMode },
-                { label: 'Device Type', value: selectedDevice.deviceType },
-                { label: 'Serial', value: selectedDevice.serial ?? 'N/A', mono: true },
-                { label: 'Chipset', value: selectedDevice.chipset ?? 'N/A' },
-                { label: 'Container', value: selectedDevice.container ?? 'N/A', mono: true },
-              ].map((item) => (
-                <div key={item.label} className="bg-surface-2/40 rounded-xl p-3 border border-white/5">
-                  <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">{item.label}</div>
-                  <div className={`text-sm font-medium text-white/80 ${item.mono ? 'font-mono' : ''}`}>
-                    {item.value}
-                  </div>
-                </div>
+                { id: 'info' as const, label: 'Info' },
+                { id: 'operations' as const, label: `Operations (${getAvailableOperations(selectedDevice).length})` },
+                { id: 'tools' as const, label: 'Tools' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20'
+                      : 'text-white/40 hover:text-white/60 border border-transparent'
+                  }`}
+                >
+                  {tab.label}
+                </button>
               ))}
             </div>
 
-            {/* Capabilities */}
-            <div className="mb-6">
-              <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Capabilities</div>
-              <div className="flex flex-wrap gap-2">
-                {selectedDevice.capabilities.canFlash && (
-                  <span className="px-3 py-1.5 rounded-lg bg-neon-green/10 text-neon-green border border-neon-green/20 text-xs font-medium">
-                    Flash
-                  </span>
-                )}
-                {selectedDevice.capabilities.canBackup && (
-                  <span className="px-3 py-1.5 rounded-lg bg-neon-blue/10 text-neon-blue border border-neon-blue/20 text-xs font-medium">
-                    Backup
-                  </span>
-                )}
-                {selectedDevice.capabilities.canIsp && (
-                  <span className="px-3 py-1.5 rounded-lg bg-neon-yellow/10 text-neon-yellow border border-neon-yellow/20 text-xs font-medium">
-                    ISP
-                  </span>
-                )}
-                {selectedDevice.capabilities.canUnlockBootloader && (
-                  <span className="px-3 py-1.5 rounded-lg bg-neon-purple/10 text-neon-purple border border-neon-purple/20 text-xs font-medium">
-                    Unlock
-                  </span>
-                )}
-                {selectedDevice.capabilities.canReadInfo && (
-                  <span className="px-3 py-1.5 rounded-lg bg-white/5 text-white/50 border border-white/10 text-xs font-medium">
-                    Read Info
-                  </span>
-                )}
-                {selectedDevice.capabilities.canJtag && (
-                  <span className="px-3 py-1.5 rounded-lg bg-neon-orange/10 text-neon-orange border border-neon-orange/20 text-xs font-medium">
-                    JTAG
-                  </span>
+            {/* Info Tab */}
+            {activeTab === 'info' && (
+              <div className="animate-fade-in">
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  {[
+                    { label: 'VID:PID', value: `${selectedDevice.vendorId}:${selectedDevice.productId}`, mono: true },
+                    { label: 'Boot Mode', value: selectedDevice.bootMode },
+                    { label: 'Device Type', value: selectedDevice.deviceType },
+                    { label: 'Serial', value: selectedDevice.serial ?? 'N/A', mono: true },
+                    { label: 'Chipset', value: selectedDevice.chipset ?? 'N/A' },
+                    { label: 'Container', value: selectedDevice.container ?? 'N/A', mono: true },
+                  ].map((item) => (
+                    <div key={item.label} className="bg-surface-2/40 rounded-xl p-3 border border-white/5">
+                      <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">{item.label}</div>
+                      <div className={`text-sm font-medium text-white/80 ${item.mono ? 'font-mono' : ''}`}>
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mb-6">
+                  <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Capabilities</div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDevice.capabilities.canFlash && (
+                      <span className="px-3 py-1.5 rounded-lg bg-neon-green/10 text-neon-green border border-neon-green/20 text-xs font-medium">
+                        Flash
+                      </span>
+                    )}
+                    {selectedDevice.capabilities.canBackup && (
+                      <span className="px-3 py-1.5 rounded-lg bg-neon-blue/10 text-neon-blue border border-neon-blue/20 text-xs font-medium">
+                        Backup
+                      </span>
+                    )}
+                    {selectedDevice.capabilities.canIsp && (
+                      <span className="px-3 py-1.5 rounded-lg bg-neon-yellow/10 text-neon-yellow border border-neon-yellow/20 text-xs font-medium">
+                        ISP
+                      </span>
+                    )}
+                    {selectedDevice.capabilities.canUnlockBootloader && (
+                      <span className="px-3 py-1.5 rounded-lg bg-neon-purple/10 text-neon-purple border border-neon-purple/20 text-xs font-medium">
+                        Unlock
+                      </span>
+                    )}
+                    {selectedDevice.capabilities.canReadInfo && (
+                      <span className="px-3 py-1.5 rounded-lg bg-white/5 text-white/50 border border-white/10 text-xs font-medium">
+                        Read Info
+                      </span>
+                    )}
+                    {selectedDevice.capabilities.canJtag && (
+                      <span className="px-3 py-1.5 rounded-lg bg-neon-orange/10 text-neon-orange border border-neon-orange/20 text-xs font-medium">
+                        JTAG
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Operations Tab */}
+            {activeTab === 'operations' && (
+              <div className="animate-fade-in">
+                <div className="mb-4">
+                  <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Available Operations</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {getAvailableOperations(selectedDevice).map((operation) => {
+                      const catColors = CATEGORY_COLORS[operation.category]
+                      const execution = Object.values(operationStatuses).find(
+                        (e) => e.operationId === operation.id && e.deviceId === selectedDevice.id
+                      )
+                      const isRunning = execution?.status === 'running'
+
+                      return (
+                        <div
+                          key={operation.id}
+                          className={`p-4 rounded-xl border transition-all ${
+                            execution?.status === 'success'
+                              ? 'bg-neon-green/5 border-neon-green/20'
+                              : execution?.status === 'error'
+                              ? 'bg-red-500/5 border-red-500/20'
+                              : 'bg-surface-2/40 border-white/5 hover:border-white/10'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] px-2 py-0.5 rounded ${catColors.bg} ${catColors.text} ${catColors.border} border capitalize`}>
+                                {operation.category}
+                              </span>
+                              <span className={`text-[10px] font-medium ${RISK_COLORS[operation.riskLevel]}`}>
+                                {operation.riskLevel}
+                              </span>
+                            </div>
+                            {execution && (
+                              <span className={`text-[10px] px-2 py-0.5 rounded ${STATUS_COLORS[execution.status].bg} ${STATUS_COLORS[execution.status].text} capitalize`}>
+                                {execution.status}
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-sm font-medium text-white/80 mb-1">{operation.name}</h4>
+                          <p className="text-[10px] text-white/30 mb-3 line-clamp-2">{operation.description}</p>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-white/20 truncate max-w-[60%]">
+                              {operation.command.substring(0, 30)}...
+                            </span>
+                            <button
+                              onClick={() => handleRunOperation(selectedDevice, operation)}
+                              disabled={isRunning || activeOperation !== null}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+                                isRunning
+                                  ? 'bg-neon-blue/10 text-neon-blue border border-neon-blue/20 cursor-wait'
+                                  : 'bg-neon-green/10 text-neon-green border border-neon-green/20 hover:bg-neon-green/20'
+                              } disabled:opacity-50`}
+                            >
+                              {isRunning ? (
+                                <span className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 border border-neon-blue/30 border-t-neon-blue rounded-full animate-spin" />
+                                  Running
+                                </span>
+                              ) : (
+                                'Run'
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Operation Output */}
+                {activeOperation && operationStatuses[activeOperation] && (
+                  <div className="mt-4 bg-surface-1/50 rounded-xl p-4 border border-white/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-white/60">Output</span>
+                      <span className="text-[10px] text-white/30">
+                        {operationStatuses[activeOperation].progress}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-surface-3/60 rounded-full overflow-hidden mb-3">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          operationStatuses[activeOperation].status === 'success'
+                            ? 'bg-neon-green'
+                            : operationStatuses[activeOperation].status === 'error'
+                            ? 'bg-red-400'
+                            : 'bg-neon-blue'
+                        }`}
+                        style={{ width: `${operationStatuses[activeOperation].progress}%` }}
+                      />
+                    </div>
+                    <pre className="text-[10px] font-mono text-neon-green/70 whitespace-pre-wrap max-h-32 overflow-auto">
+                      {operationStatuses[activeOperation].output}
+                    </pre>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
 
-            {/* Tools */}
-            <div className="mb-8">
-              <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Available Tools</div>
-              <div className="flex flex-wrap gap-2">
-                {selectedDevice.tools.map((tool) => (
-                  <span
-                    key={tool}
-                    className="px-3 py-1.5 rounded-lg bg-surface-3/60 text-white/60 border border-white/5 text-xs font-mono"
+            {/* Tools Tab */}
+            {activeTab === 'tools' && (
+              <div className="animate-fade-in">
+                <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Available Tools</div>
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                  {selectedDevice.tools.map((tool) => (
+                    <div
+                      key={tool}
+                      className="px-3 py-2 rounded-lg bg-surface-3/60 text-white/60 border border-white/5 text-xs font-mono text-center"
+                    >
+                      {tool}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleOpenShell(selectedDevice)}
+                    className="btn-cyber flex items-center gap-2"
                   >
-                    {tool}
-                  </span>
-                ))}
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                    Open Shell
+                  </button>
+                  <button
+                    onClick={() => handleCopyInfo(selectedDevice)}
+                    className="btn-ghost flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                    </svg>
+                    Copy Info
+                  </button>
+                  <button
+                    onClick={() => handleBackup(selectedDevice)}
+                    className="btn-ghost flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                    </svg>
+                    Backup
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleOpenShell(selectedDevice)}
-                className="btn-cyber flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-                Open Shell
-              </button>
-              <button
-                onClick={() => handleCopyInfo(selectedDevice)}
-                className="btn-ghost flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                </svg>
-                Copy Info
-              </button>
-              <button
-                onClick={() => handleBackup(selectedDevice)}
-                className="btn-ghost flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                </svg>
-                Backup
-              </button>
-            </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center">

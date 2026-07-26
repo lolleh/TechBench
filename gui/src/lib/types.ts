@@ -131,6 +131,34 @@ export interface BenchStatus {
   deviceCount: number
 }
 
+export type OperationCategory = 'security' | 'system' | 'backup' | 'cloud' | 'network'
+export type OperationStatus = 'idle' | 'running' | 'success' | 'error' | 'cancelled'
+
+export interface DeviceOperation {
+  id: string
+  name: string
+  description: string
+  category: OperationCategory
+  icon: string
+  command: string
+  requiresUnlock: boolean
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+  supportedBootModes: BootMode[]
+  supportedDeviceTypes: DeviceType[]
+}
+
+export interface OperationExecution {
+  id: string
+  operationId: string
+  deviceId: string
+  status: OperationStatus
+  progress: number
+  output: string
+  startTime?: Date
+  endTime?: Date
+  error?: string
+}
+
 export interface DeviceHistoryEntry {
   id: string
   timestamp: Date
