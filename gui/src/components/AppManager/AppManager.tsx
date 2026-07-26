@@ -43,19 +43,19 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
 
     try {
       const deviceIdentifier = deviceName || deviceSerial
-      const packageList = await tauri.invoke<Array<{ packageName: string; isSystem: boolean }>>(
+      const packageList = await tauri.invoke(
         'adb_list_apps',
         { device: deviceIdentifier, includeSystem: true }
-      )
+      ) as Array<{ packageName: string; isSystem: boolean }>
 
       const detailedApps: InstalledApp[] = []
 
       for (const pkg of packageList) {
         try {
-          const details = await tauri.invoke<Record<string, unknown>>(
+          const details = await tauri.invoke(
             'adb_get_app_details',
             { device: deviceIdentifier, packageName: pkg.packageName }
-          )
+          ) as Record<string, unknown>
 
           if (details) {
             detailedApps.push({
@@ -123,7 +123,6 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
 
   const systemCount = apps.filter((a) => a.isSystem).length
   const userCount = apps.filter((a) => !a.isSystem).length
-  const updatedCount = apps.filter((a) => a.isUpdated).length
 
   const handleAction = useCallback(async (app: InstalledApp, action: AppAction) => {
     if (!deviceSerial) return
@@ -174,7 +173,7 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
         },
       }))
 
-      const result = await tauri.invoke<{ success: boolean; message: string }>(
+      const result = await tauri.invoke(
         action === 'upgrade' ? 'adb_upgrade_app' :
         action === 'uninstall' || action === 'force_uninstall' ? 'adb_uninstall_app' :
         action === 'disable' ? 'adb_disable_app' :
@@ -186,7 +185,7 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
           packageName: app.packageName,
           force: action === 'force_uninstall',
         }
-      )
+      ) as { success: boolean; message: string }
 
       setExecutions((prev) => ({
         ...prev,

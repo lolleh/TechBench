@@ -38,7 +38,7 @@ function formatSize(bytes: number): string {
 
 export function PartitionManager() {
   const [selectedPartition, setSelectedPartition] = useState<Partition | null>(null)
-  const [deviceSerial, setDeviceSerial] = useState('HT892XYZ')
+  const [deviceSerial] = useState('HT892XYZ')
 
   const totalSize = MOCK_PARTITIONS.reduce((sum, p) => sum + p.size, 0)
   const dumpedCount = MOCK_PARTITIONS.filter((p) => p.status === 'dumped').length

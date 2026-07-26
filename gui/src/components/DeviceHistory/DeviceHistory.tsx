@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DeviceHistoryEntry, DeviceType, BootMode } from '../../lib/types'
+import type { DeviceHistoryEntry } from '../../lib/types'
 
 const MOCK_HISTORY: DeviceHistoryEntry[] = [
   { id: '1', timestamp: new Date(Date.now() - 300000), deviceName: 'Lenovo Tab M11', vendorId: '17ef', productId: '6010', deviceType: 'android', bootMode: 'normal', serial: 'HT892XYZ', action: 'connected', details: 'USB Debug mode' },
@@ -28,39 +28,6 @@ const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
   backed_up: { bg: 'bg-neon-blue/10', text: 'text-neon-blue' },
   recovered: { bg: 'bg-neon-purple/10', text: 'text-neon-purple' },
   error: { bg: 'bg-red-500/10', text: 'text-red-400' },
-}
-
-const ACTION_ICONS: Record<string, JSX.Element> = {
-  connected: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-  ),
-  disconnected: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  ),
-  flashed: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-    </svg>
-  ),
-  backed_up: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-    </svg>
-  ),
-  recovered: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-    </svg>
-  ),
-  error: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-    </svg>
-  ),
 }
 
 function formatTimeAgo(date: Date): string {
@@ -154,7 +121,7 @@ export function DeviceHistory() {
             <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
 
             <div className="space-y-1">
-              {filtered.map((entry, i) => {
+              {filtered.map((entry) => {
                 const colors = ACTION_COLORS[entry.action]
                 return (
                   <div key={entry.id} className="relative flex items-start gap-4 p-3 rounded-xl hover:bg-surface-2/30 transition-colors group">

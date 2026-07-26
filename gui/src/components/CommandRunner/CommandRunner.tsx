@@ -6,10 +6,10 @@ const MOCK_COMMANDS: SavedCommand[] = [
   { id: '2', name: 'List Partitions', command: 'adb shell ls /dev/block/bootdevice/by-name/', category: 'adb', description: 'List all partition names', lastRun: new Date(Date.now() - 120000), runCount: 8 },
   { id: '3', name: 'Check Battery', command: 'adb shell dumpsys battery', category: 'adb', description: 'Get battery status', lastRun: new Date(Date.now() - 180000), runCount: 5 },
   { id: '4', name: 'Fastboot Devices', command: 'fastboot devices', category: 'fastboot', description: 'List connected fastboot devices', lastRun: new Date(Date.now() - 300000), runCount: 15 },
-  { id: '5', name: 'Flash Boot', command: 'fastboot flash boot boot.img', category: 'fastboot', description: 'Flash boot partition', lastRun: null, runCount: 0 },
-  { id: '6', name: 'Unlock Bootloader', command: 'fastboot oem unlock', category: 'fastboot', description: 'Unlock device bootloader', lastRun: null, runCount: 0 },
+  { id: '5', name: 'Flash Boot', command: 'fastboot flash boot boot.img', category: 'fastboot', description: 'Flash boot partition', lastRun: undefined, runCount: 0 },
+  { id: '6', name: 'Unlock Bootloader', command: 'fastboot oem unlock', category: 'fastboot', description: 'Unlock device bootloader', lastRun: undefined, runCount: 0 },
   { id: '7', name: 'System Info', command: 'cat /proc/version && uname -a', category: 'shell', description: 'Get system version info', lastRun: new Date(Date.now() - 600000), runCount: 3 },
-  { id: '8', name: 'Clear Cache', command: 'adb shell pm clear com.android.providers.calendar', category: 'custom', description: 'Clear calendar cache', lastRun: null, runCount: 0 },
+  { id: '8', name: 'Clear Cache', command: 'adb shell pm clear com.android.providers.calendar', category: 'custom', description: 'Clear calendar cache', lastRun: undefined, runCount: 0 },
 ]
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -37,7 +37,7 @@ export function CommandRunner() {
   const [isRunning, setIsRunning] = useState(false)
   const [filter, setFilter] = useState<string>('all')
 
-  const handleRun = (cmd: string) => {
+  const handleRun = (_cmd: string) => {
     setIsRunning(true)
     setOutput('')
     let i = 0

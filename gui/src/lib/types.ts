@@ -1,4 +1,4 @@
-export type DeviceType = 'android' | 'apple' | 'qualcomm' | 'mediatek' | 'samsung' | 'generic' | 'unknown'
+export type DeviceType = 'android' | 'apple' | 'qualcomm' | 'mediatek' | 'samsung' | 'xiaomi' | 'lenovo' | 'oppo' | 'vivo' | 'motorola' | 'huawei' | 'tecno' | 'zte' | 'generic' | 'unknown'
 export type BootMode = 'normal' | 'fastboot' | 'edl' | 'recovery' | 'dfu' | 'download' | 'preloader' | 'unknown'
 export type DeviceStatus = 'connected' | 'disconnected' | 'error' | 'busy'
 

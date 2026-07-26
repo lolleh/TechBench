@@ -116,11 +116,16 @@ class DeviceInfo:
     boot_mode: str  # normal, edl, recovery, dfu, fastboot, download, unknown
     container: Optional[str]  # container to launch
     tools: List[str]  # available tools
+    chipset: Optional[str] = None  # chipset information
+    functions: Optional[List[str]] = None  # supported functions
+    notes: Optional[str] = None  # additional notes
     timestamp: datetime = None
 
     def __post_init__(self):
         if self.timestamp is None:
             self.timestamp = datetime.now()
+        if self.functions is None:
+            self.functions = []
 
 
 class ChipsetDatabase:
@@ -242,6 +247,13 @@ def _identify_from_udev_props(device) -> Optional[DeviceInfo]:
     product_id = device.get("ID_MODEL_ID", "0000")
     vendor_name = device.get("ID_VENDOR_FROM_DATABASE", "Unknown")
     product_name = device.get("ID_MODEL_FROM_DATABASE", "Unknown")
+    
+    # Try to get more detailed information from udev properties
+    if vendor_name == "Unknown":
+        vendor_name = device.get("ID_VENDOR", "Unknown")
+    if product_name == "Unknown":
+        product_name = device.get("ID_MODEL", "Unknown")
+    
     return _build_device_info(vendor_id, product_id, vendor_name, product_name)
 
 
@@ -416,17 +428,24 @@ def _build_device_info(vendor_id: str, product_id: str, vendor_name: str, produc
         boot_mode = _chipset_db.detect_boot_mode(vendor_id, product_id)
         container = db_entry.get("container")
         tools = db_entry.get("tools", [])
+        chipset = db_entry.get("chipset")
+        functions = db_entry.get("functions", [])
+        notes = db_entry.get("notes")
     else:
         device_type = _guess_device_type(vendor_name, product_name)
         boot_mode = "normal"
         container = _get_default_container(device_type)
         tools = _get_default_tools(device_type)
+        chipset = None
+        functions = []
+        notes = None
 
     return DeviceInfo(
         vendor_id=vendor_id, product_id=product_id,
         vendor_name=vendor_name, product_name=product_name,
         device_type=device_type, boot_mode=boot_mode,
         container=container, tools=tools,
+        chipset=chipset, functions=functions, notes=notes,
     )
 
 
@@ -443,6 +462,32 @@ def _guess_device_type(vendor_name: str, product_name: str) -> str:
         return "apple"
     elif "google" in v or "pixel" in p:
         return "android"
+    elif "xiaomi" in v or "redmi" in v or "poco" in v:
+        return "xiaomi"
+    elif "huawei" in v or "honor" in v:
+        return "huawei"
+    elif "oppo" in v or "realme" in v:
+        return "oppo"
+    elif "vivo" in v or "iqoo" in v:
+        return "vivo"
+    elif "motorola" in v or "moto" in v:
+        return "motorola"
+    elif "lenovo" in v or "tab" in p:
+        return "lenovo"
+    elif "tecno" in v or "infinix" in v or "itel" in v:
+        return "tecno"
+    elif "zte" in v or "nubia" in v:
+        return "zte"
+    elif "sony" in v or "xperia" in p:
+        return "sony"
+    elif "lg" in v:
+        return "lg"
+    elif "htc" in v:
+        return "htc"
+    elif "oneplus" in v:
+        return "oneplus"
+    elif "nokia" in v:
+        return "nokia"
     elif "android" in p:
         return "android"
     return "unknown"
@@ -452,7 +497,13 @@ def _get_default_container(device_type: str) -> str:
     return {
         "qualcomm": "qualcomm-edl", "mediatek": "mediatek-flash",
         "samsung": "samsung-odin", "apple": "apple-tools",
-        "android": "android-tools",
+        "android": "android-tools", "xiaomi": "android-tools",
+        "huawei": "android-tools", "oppo": "android-tools",
+        "vivo": "android-tools", "motorola": "android-tools",
+        "lenovo": "android-tools", "tecno": "android-tools",
+        "zte": "android-tools", "sony": "android-tools",
+        "lg": "android-tools", "htc": "android-tools",
+        "oneplus": "android-tools", "nokia": "android-tools",
     }.get(device_type, "android-tools")
 
 
@@ -463,6 +514,19 @@ def _get_default_tools(device_type: str) -> List[str]:
         "samsung": ["heimdall", "odin"],
         "apple": ["idevicerestore", "libimobiledevice"],
         "android": ["adb", "fastboot"],
+        "xiaomi": ["adb", "fastboot", "miflash"],
+        "huawei": ["adb", "fastboot", "hisuite"],
+        "oppo": ["adb", "fastboot"],
+        "vivo": ["adb", "fastboot"],
+        "motorola": ["adb", "fastboot"],
+        "lenovo": ["adb", "fastboot"],
+        "tecno": ["adb", "fastboot"],
+        "zte": ["adb", "fastboot"],
+        "sony": ["adb", "fastboot"],
+        "lg": ["adb", "fastboot"],
+        "htc": ["adb", "fastboot"],
+        "oneplus": ["adb", "fastboot"],
+        "nokia": ["adb", "fastboot"],
     }.get(device_type, ["adb"])
 
 
@@ -604,6 +668,9 @@ class DeviceDetector:
                 "boot_mode": device_info.boot_mode,
                 "container": device_info.container,
                 "tools": device_info.tools,
+                "chipset": device_info.chipset,
+                "functions": device_info.functions,
+                "notes": device_info.notes,
                 "platform": platform.system(),
                 "created_at": device_info.timestamp.isoformat(),
             }, f, indent=2)
@@ -653,6 +720,9 @@ class DeviceDetector:
                 "device_type": device_info.device_type,
                 "boot_mode": device_info.boot_mode,
                 "tools": device_info.tools,
+                "chipset": device_info.chipset,
+                "functions": device_info.functions,
+                "notes": device_info.notes,
             },
             "timestamp": device_info.timestamp.isoformat(),
         }

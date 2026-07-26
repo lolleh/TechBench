@@ -148,5 +148,657 @@
     "boot_modes": ["flashmode", "normal"],
     "tools": ["flashtool", "fastboot"],
     "container": "android-tools"
+  },
+  "17ef:6009": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab M10 (USB Debug)",
+    "description": "Lenovo Tab M10 series in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 (Gen 1)",
+      "Lenovo Tab M10 (Gen 2)",
+      "Lenovo Tab M10 FHD",
+      "Lenovo Tab M10 Plus"
+    ]
+  },
+  "17ef:6010": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 (USB Debug)",
+    "description": "Lenovo Tab M11 2024 with MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 (TB330FU)",
+      "Lenovo Tab M11 (TB330KU)",
+      "Lenovo Tab M11 (TB330XU)",
+      "Lenovo Tab K11"
+    ]
+  },
+  "17ef:6011": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 (USB Debug)",
+    "description": "Lenovo Tab P11 series in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11",
+      "Lenovo Tab P11 Plus",
+      "Lenovo Tab P11 Pro"
+    ]
+  },
+  "17ef:6012": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 (USB Debug)",
+    "description": "Lenovo Tab P12 series in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12",
+      "Lenovo Tab P12 Pro",
+      "Lenovo Tab P12 Pro Plus"
+    ]
+  },
+  "17ef:6013": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 (MediaTek)",
+    "description": "Lenovo Tab M10 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 Gen 3",
+      "Lenovo Tab M10 HD"
+    ]
+  },
+  "17ef:6014": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab M8 (USB Debug)",
+    "description": "Lenovo Tab M8 series in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M8",
+      "Lenovo Tab M8 Gen 2",
+      "Lenovo Tab M8 Gen 3"
+    ]
+  },
+  "17ef:6015": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab M7 (USB Debug)",
+    "description": "Lenovo Tab M7 series in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M7",
+      "Lenovo Tab M7 Gen 2",
+      "Lenovo Tab M7 Gen 3"
+    ]
+  },
+  "17ef:6016": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Pro Gen 2",
+    "description": "Lenovo Tab P11 Pro Gen 2 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Pro Gen 2"
+    ]
+  },
+  "17ef:6017": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro Gen 2",
+    "description": "Lenovo Tab P12 Pro Gen 2 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro Gen 2"
+    ]
+  },
+  "17ef:6018": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 Plus (MediaTek)",
+    "description": "Lenovo Tab M11 Plus with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Plus Gen 2",
+      "Lenovo Tab M11 Plus Gen 3"
+    ]
+  },
+  "17ef:6019": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 5G",
+    "description": "Lenovo Tab P11 5G in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 5G"
+    ]
+  },
+  "17ef:6020": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro 5G",
+    "description": "Lenovo Tab P12 Pro 5G in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro 5G"
+    ]
+  },
+  "17ef:6021": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab M10 FHD Plus",
+    "description": "Lenovo Tab M10 FHD Plus in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 FHD Plus (Gen 2)",
+      "Lenovo Tab M10 FHD Plus (Gen 3)"
+    ]
+  },
+  "17ef:6022": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab M10 HD",
+    "description": "Lenovo Tab M10 HD in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 HD (Gen 2)",
+      "Lenovo Tab M10 HD (Gen 3)"
+    ]
+  },
+  "17ef:6023": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Plus",
+    "description": "Lenovo Tab P11 Plus in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Plus (Gen 1)",
+      "Lenovo Tab P11 Plus (Gen 2)"
+    ]
+  },
+  "17ef:6024": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro",
+    "description": "Lenovo Tab P12 Pro in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro (Gen 1)",
+      "Lenovo Tab P12 Pro (Gen 2)"
+    ]
+  },
+  "17ef:6025": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Pro Gen 3",
+    "description": "Lenovo Tab P11 Pro Gen 3 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Pro Gen 3"
+    ]
+  },
+  "17ef:6026": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Gen 2",
+    "description": "Lenovo Tab P12 Gen 2 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Gen 2"
+    ]
+  },
+  "17ef:6027": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 Plus Gen 4",
+    "description": "Lenovo Tab M11 Plus Gen 4 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Plus Gen 4"
+    ]
+  },
+  "17ef:6028": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 Plus Gen 3",
+    "description": "Lenovo Tab M10 Plus Gen 3 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 Plus Gen 3"
+    ]
+  },
+  "17ef:6029": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 (Gen 2)",
+    "description": "Lenovo Tab M11 Gen 2 with MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Gen 2 (TB330FU)",
+      "Lenovo Tab M11 Gen 2 (TB330KU)",
+      "Lenovo Tab M11 Gen 2 (TB330XU)"
+    ]
+  },
+  "17ef:6030": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Pro (Gen 1)",
+    "description": "Lenovo Tab P11 Pro Gen 1 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Pro (Gen 1)"
+    ]
+  },
+  "17ef:6031": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro (Gen 1)",
+    "description": "Lenovo Tab P12 Pro Gen 1 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro (Gen 1)"
+    ]
+  },
+  "17ef:6032": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 Plus Gen 2",
+    "description": "Lenovo Tab M10 Plus Gen 2 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 Plus Gen 2"
+    ]
+  },
+  "17ef:6033": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 HD Gen 2",
+    "description": "Lenovo Tab M10 HD Gen 2 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 HD Gen 2"
+    ]
+  },
+  "17ef:6034": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Plus Gen 2",
+    "description": "Lenovo Tab P11 Plus Gen 2 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Plus Gen 2"
+    ]
+  },
+  "17ef:6035": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro Gen 3",
+    "description": "Lenovo Tab P12 Pro Gen 3 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro Gen 3"
+    ]
+  },
+  "17ef:6036": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 Plus Gen 5",
+    "description": "Lenovo Tab M11 Plus Gen 5 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Plus Gen 5"
+    ]
+  },
+  "17ef:6037": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 Plus Gen 4",
+    "description": "Lenovo Tab M10 Plus Gen 4 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 Plus Gen 4"
+    ]
+  },
+  "17ef:6038": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 HD Gen 3",
+    "description": "Lenovo Tab M10 HD Gen 3 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 HD Gen 3"
+    ]
+  },
+  "17ef:6039": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Plus Gen 3",
+    "description": "Lenovo Tab P11 Plus Gen 3 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Plus Gen 3"
+    ]
+  },
+  "17ef:6040": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro Gen 4",
+    "description": "Lenovo Tab P12 Pro Gen 4 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro Gen 4"
+    ]
+  },
+  "17ef:6041": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 Plus Gen 6",
+    "description": "Lenovo Tab M11 Plus Gen 6 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Plus Gen 6"
+    ]
+  },
+  "17ef:6042": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 Plus Gen 5",
+    "description": "Lenovo Tab M10 Plus Gen 5 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 Plus Gen 5"
+    ]
+  },
+  "17ef:6043": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M10 HD Gen 4",
+    "description": "Lenovo Tab M10 HD Gen 4 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M10 HD Gen 4"
+    ]
+  },
+  "17ef:6044": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P11 Plus Gen 4",
+    "description": "Lenovo Tab P11 Plus Gen 4 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P11 Plus Gen 4"
+    ]
+  },
+  "17ef:6045": {
+    "vendor": "lenovo",
+    "chipset": "qualcomm",
+    "name": "Lenovo Tab P12 Pro Gen 5",
+    "description": "Lenovo Tab P12 Pro Gen 5 in ADB mode",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab P12 Pro Gen 5"
+    ]
+  },
+  "17ef:6046": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 WiFi (TB330FU)",
+    "description": "Lenovo Tab M11 2024 WiFi-only model with MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 WiFi (TB330FU)",
+      "Lenovo Tab K11 WiFi"
+    ]
+  },
+  "17ef:6047": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 LTE (TB330KU)",
+    "description": "Lenovo Tab M11 2024 LTE model with MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 LTE (TB330KU)",
+      "Lenovo Tab K11 LTE"
+    ]
+  },
+  "17ef:6048": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 LTE with Pen (TB330XU)",
+    "description": "Lenovo Tab M11 2024 LTE model with Pen support, MediaTek Helio G88",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 LTE with Pen (TB330XU)",
+      "Lenovo Tab K11 LTE with Pen"
+    ]
+  },
+  "17ef:6049": {
+    "vendor": "lenovo",
+    "chipset": "mediatek",
+    "name": "Lenovo Tab M11 Plus Gen 7",
+    "description": "Lenovo Tab M11 Plus Gen 7 with MediaTek chipset",
+    "boot_modes": ["normal", "fastboot"],
+    "tools": ["adb", "fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Lenovo Tab M11 Plus Gen 7"
+    ]
+  },
+  "22d9:2765": {
+    "vendor": "oppo",
+    "chipset": "qualcomm",
+    "name": "OPPO (Fastboot)",
+    "description": "OPPO device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot", "download"],
+    "container": "android-tools",
+    "common_devices": [
+      "OPPO Reno Series",
+      "OPPO A Series",
+      "OPPO Find X Series"
+    ]
+  },
+  "2a70:9093": {
+    "vendor": "realme",
+    "chipset": "qualcomm",
+    "name": "Realme (Fastboot)",
+    "description": "Realme device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot", "download"],
+    "container": "android-tools",
+    "common_devices": [
+      "Realme GT Series",
+      "Realme Number Series",
+      "Realme C Series",
+      "Realme Narzo Series"
+    ]
+  },
+  "2d95:5a01": {
+    "vendor": "vivo",
+    "chipset": "qualcomm",
+    "name": "Vivo (Fastboot)",
+    "description": "Vivo device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot", "download"],
+    "container": "android-tools",
+    "common_devices": [
+      "Vivo V Series",
+      "Vivo Y Series",
+      "Vivo X Series",
+      "iQOO Series"
+    ]
+  },
+  "22b8:2e24": {
+    "vendor": "motorola",
+    "chipset": "qualcomm",
+    "name": "Motorola (Fastboot)",
+    "description": "Motorola device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "Moto G Series",
+      "Moto Edge Series",
+      "Moto E Series"
+    ]
+  },
+  "12d1:0001": {
+    "vendor": "huawei",
+    "chipset": "kirin",
+    "name": "Huawei/Honor (Fastboot)",
+    "description": "Huawei or Honor device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot", "hisuite"],
+    "container": "android-tools",
+    "common_devices": [
+      "Huawei P Series",
+      "Huawei Mate Series",
+      "Huawei Nova Series",
+      "Honor Series"
+    ]
+  },
+  "25c7:0013": {
+    "vendor": "tecno",
+    "chipset": "mediatek",
+    "name": "Tecno/Infinix/ITEL (Preloader)",
+    "description": "Tecno, Infinix, or ITEL device in preloader mode",
+    "boot_modes": ["preloader", "normal"],
+    "tools": ["sp-flash-tool", "mtkclient"],
+    "container": "mediatek-flash",
+    "common_devices": [
+      "Tecno Spark Series",
+      "Tecno Camon Series",
+      "Tecno Pova Series",
+      "Infinix Hot Series",
+      "Infinix Note Series",
+      "Infinix Zero Series",
+      "ITEL P Series",
+      "ITEL S Series",
+      "ITEL A Series"
+    ]
+  },
+  "19d2:0001": {
+    "vendor": "zte",
+    "chipset": "qualcomm",
+    "name": "ZTE/Nubia (Fastboot)",
+    "description": "ZTE or Nubia device in fastboot mode",
+    "boot_modes": ["fastboot", "normal"],
+    "tools": ["fastboot"],
+    "container": "android-tools",
+    "common_devices": [
+      "ZTE Nubia Red Magic Series",
+      "ZTE Nubia Z Series",
+      "ZTE Nubia Play"
+    ]
+  },
+  "05ac:1222": {
+    "vendor": "apple",
+    "chipset": "a-series",
+    "name": "Apple iOS Device",
+    "description": "Apple device in normal mode",
+    "boot_modes": ["normal"],
+    "tools": ["libimobiledevice", "ideviceinstaller", "ifuse"],
+    "container": "apple-tools"
+  },
+  "05ac:1281": {
+    "vendor": "apple",
+    "chipset": "a-series",
+    "name": "Apple Recovery Mode",
+    "description": "Apple Recovery (iBoot) mode",
+    "boot_modes": ["recovery", "normal"],
+    "tools": ["idevicerestore", "libimobiledevice"],
+    "container": "apple-tools"
+  },
+  "05ac:1227": {
+    "vendor": "apple",
+    "chipset": "a-series",
+    "name": "Apple DFU Mode",
+    "description": "Apple Device Firmware Upgrade mode",
+    "boot_modes": ["dfu", "recovery", "normal"],
+    "tools": ["idevicerestore", "checkm8", "libimobiledevice"],
+    "container": "apple-tools",
+    "note": "checkm8 only works on A11 and below"
   }
 }

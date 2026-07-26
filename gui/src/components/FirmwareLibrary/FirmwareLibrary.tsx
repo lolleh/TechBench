@@ -25,7 +25,7 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string }> = {
 }
 
 export function FirmwareLibrary() {
-  const [firmware] = useState(FirmwareLibraryEntry[]>(MOCK_FIRMWARE)
+  const [firmware] = useState<FirmwareLibraryEntry[]>(MOCK_FIRMWARE)
   const [search, setSearch] = useState('')
   const [selectedFirmware, setSelectedFirmware] = useState<FirmwareLibraryEntry | null>(null)
   const [filterDownloaded, setFilterDownloaded] = useState<boolean | null>(null)
