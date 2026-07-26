@@ -383,6 +383,92 @@ iPhone, iPad (basic operations); checkm8 support for A11 and below
 
 Pixel (all models)
 
+---
+
+## Device Modes
+
+TechBench auto-detects devices based on their USB VID:PID. Here are the modes your device should be in:
+
+### Normal Mode (ADB)
+
+Used for: App management, file transfer, shell access, reading device info
+
+1. Go to **Settings > About Phone**
+2. Tap **Build Number** 7 times to enable Developer Options
+3. Go to **Settings > Developer Options**
+4. Enable **USB Debugging**
+5. Connect device via USB
+6. Accept the "Allow USB Debugging" prompt on device
+
+### Fastboot Mode
+
+Used for: Bootloader unlock, flashing firmware, factory reset, partition operations
+
+1. Power off device completely
+2. Hold **Volume Down + Power** (varies by brand)
+3. Connect USB cable while holding buttons
+4. Release when Fastboot screen appears
+
+### EDL Mode (Qualcomm)
+
+Used for: Deep flashing, unbricking, auth bypass for Qualcomm devices
+
+1. Connect device in Fastboot mode
+2. Send `fastboot oem edl` command
+3. Or use test point method (hardware)
+4. Device connects as `05c6:90db` (Qualcomm QDLoader 9008)
+
+### Preloader Mode (MediaTek)
+
+Used for: Initial connection, firmware flashing for MediaTek devices
+
+1. Power off device completely
+2. Connect USB cable (device auto-enters Preloader mode)
+3. Device connects as `0e8d:0003`
+4. Requires drivers for MTK preloader USB VCOM
+
+### Download Mode (Samsung)
+
+Used for: Samsung firmware flashing via Odin
+
+1. Power off device
+2. Hold **Volume Down + Power + Home/Bixby** simultaneously
+3. Release when warning screen appears
+4. Press **Volume Up** to confirm
+5. Device connects as `04e8:6860`
+
+### DFU Mode (Apple)
+
+Used for: iOS firmware restore, deep flashing
+
+1. Connect device to computer
+2. Open iTunes/Finder
+3. Hold **Power + Home** buttons for 10 seconds
+4. Release Power, continue holding Home for 5 seconds
+5. Device enters DFU mode (screen stays black)
+6. Device connects as `05ac:1227`
+
+### Auto-Detection
+
+TechBench automatically detects the device mode based on the USB VID:PID:
+
+| VID:PID | Mode | Device |
+|---------|------|--------|
+| `05c6:90db` | EDL | Qualcomm devices |
+| `0e8d:0003` | Preloader | MediaTek devices |
+| `04e8:6860` | Download | Samsung devices |
+| `05ac:1227` | DFU | Apple devices |
+| `18d1:4ee7` | Fastboot | Google Pixel |
+| `2717:ff48` | Fastboot | Xiaomi devices |
+| `17ef:*` | Normal | Lenovo tablets |
+| `22d9:2765` | Fastboot | OPPO devices |
+| `2a70:9093` | Fastboot | Realme devices |
+| `2d95:5a01` | Fastboot | Vivo devices |
+| `22b8:2e24` | Fastboot | Motorola devices |
+| `12d1:0001` | Fastboot | Huawei/Honor devices |
+
+---
+
 ### Bench Equipment
 
 | Category | Supported |
