@@ -8,10 +8,17 @@ import { PowerMonitor } from './components/PowerMonitor/PowerMonitor'
 import { SchematicViewer } from './components/SchematicViewer/SchematicViewer'
 import { Flasher } from './components/Flasher/Flasher'
 import { Recovery } from './components/Recovery/Recovery'
+import { DeviceHistory } from './components/DeviceHistory/DeviceHistory'
+import { PartitionManager } from './components/PartitionManager/PartitionManager'
+import { CommandRunner } from './components/CommandRunner/CommandRunner'
+import { DeviceHealthCheck } from './components/DeviceHealth/DeviceHealth'
+import { BatchOperations } from './components/BatchOperations/BatchOperations'
+import { FirmwareLibrary } from './components/FirmwareLibrary/FirmwareLibrary'
+import { SettingsView } from './components/Settings/Settings'
 import { useDeviceStore } from './lib/deviceStore'
 import { startDeviceSimulation, stopDeviceSimulation } from './lib/mockDevices'
 
-type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery'
+type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'settings'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('devices')
@@ -43,6 +50,20 @@ function App() {
         return <Flasher />
       case 'recovery':
         return <Recovery />
+      case 'history':
+        return <DeviceHistory />
+      case 'partitions':
+        return <PartitionManager />
+      case 'commands':
+        return <CommandRunner />
+      case 'health':
+        return <DeviceHealthCheck />
+      case 'batch':
+        return <BatchOperations />
+      case 'firmware':
+        return <FirmwareLibrary />
+      case 'settings':
+        return <SettingsView />
       default:
         return <DeviceManager />
     }
