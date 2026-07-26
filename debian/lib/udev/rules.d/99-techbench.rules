@@ -74,3 +74,30 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="067b", ATTR{idProduct}=="23a3", GROUP="plugde
 # OpenHantek
 SUBSYSTEM=="usb", ATTR{idVendor}=="049f", ATTR{idProduct}=="0003", GROUP="plugdev", MODE="0664"
 SUBSYSTEM=="usb", ATTR{idVendor}=="049f", ATTR{idProduct}=="0013", GROUP="plugdev", MODE="0664"
+
+# Lenovo Tablets
+SUBSYSTEM=="usb", ATTR{idVendor}=="17ef", GROUP="plugdev", MODE="0664"
+
+# Huawei/Honor Devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="12d1", GROUP="plugdev", MODE="0664"
+
+# OPPO/Realme Devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="22d9", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2a70", GROUP="plugdev", MODE="0664"
+
+# Vivo Devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="2d95", GROUP="plugdev", MODE="0664"
+
+# Motorola Devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="22b8", GROUP="plugdev", MODE="0664"
+
+# Tecno/Infinix/ITEL Devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="25c7", GROUP="plugdev", MODE="0664"
+
+# ZTE/Nubia Devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="19d2", GROUP="plugdev", MODE="0664"
+
+# Apple DFU/Recovery
+SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="1227", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="1281", GROUP="plugdev", MODE="0664"
+SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="1222", GROUP="plugdev", MODE="0664"

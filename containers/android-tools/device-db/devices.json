@@ -43,30 +43,699 @@
     ],
     "samsung": [
       {
-        "name": "Galaxy S23",
-        "codename": "SM-S911B",
+        "name": "Galaxy S24 Series",
+        "codename": "SM-S921/SM-S926/SM-S928",
         "vid": "04e8",
         "pid": "6860",
         "download_mode": true,
         "odin": true,
+        "chipset": "Snapdragon 8 Gen 3 / Exynos 2400",
         "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
         "flash_methods": ["odin", "heimdall"],
-        "notes": "Use Odin or Heimdall for flashing"
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "S24, S24+, S24 Ultra, S24 FE"
+      },
+      {
+        "name": "Galaxy S23 Series",
+        "codename": "SM-S911/SM-S916/SM-S918",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Snapdragon 8 Gen 2 / Exynos 2200",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "S23, S23+, S23 Ultra, S23 FE"
+      },
+      {
+        "name": "Galaxy S22 Series",
+        "codename": "SM-S901/SM-S906/SM-S908",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Snapdragon 8 Gen 1 / Exynos 2200",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "S22, S22+, S22 Ultra"
+      },
+      {
+        "name": "Galaxy S21 Series",
+        "codename": "SM-G991/SM-G996/SM-G998",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Snapdragon 888 / Exynos 2100",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "S21, S21+, S21 Ultra, S21 FE"
+      },
+      {
+        "name": "Galaxy A55 / A35",
+        "codename": "SM-A556/SM-A356",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Exynos 1480 / Exynos 1380",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "A55 5G, A35 5G"
+      },
+      {
+        "name": "Galaxy A54 / A34",
+        "codename": "SM-A546/SM-A346",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Exynos 1380 / Dimensity 1080",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "A54 5G, A34 5G"
+      },
+      {
+        "name": "Galaxy A53 / A33",
+        "codename": "SM-A536/SM-A336",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Exynos 1280",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "A53 5G, A33 5G"
+      },
+      {
+        "name": "Galaxy A25 / A15",
+        "codename": "SM-A256/SM-A156",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Exynos 1280 / Dimensity 6100+",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "A25 5G, A15 4G/5G"
+      },
+      {
+        "name": "Galaxy A14 / A05",
+        "codename": "SM-A146/SM-A055",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Helio G80 / Snapdragon 680",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "A14 4G/5G, A05, A05s"
+      },
+      {
+        "name": "Galaxy A71 / A70 / A51 / A50",
+        "codename": "SM-A715/SM-A705/SM-A515/SM-A505",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Snapdragon 730G / Exynos 9610",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "A71, A70, A51, A50, A50s"
+      },
+      {
+        "name": "Galaxy M / F / XCover Series",
+        "codename": "Various",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "Exynos / Dimensity mixed",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "M14, M15, M34, M54, F14, F15, F54"
+      },
+      {
+        "name": "Galaxy Tab A9 Series",
+        "codename": "SM-X115/SM-X117",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "MediaTek Helio G99",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "Tab A9, Tab A9+"
+      },
+      {
+        "name": "Galaxy Tab S10 Series",
+        "codename": "SM-X826/SM-X926",
+        "vid": "04e8",
+        "pid": "6860",
+        "download_mode": true,
+        "odin": true,
+        "chipset": "MediaTek Dimensity 9300+",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["odin", "heimdall"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "Tab S10+, Tab S10 Ultra"
       }
     ],
     "xiaomi": [
       {
-        "name": "Redmi Note 12",
-        "codename": "topaz",
-        "vid": "18d1",
-        "pid": "4ee7",
-        "fastboot_pid": "4ee0",
+        "name": "Xiaomi 14 Series",
+        "codename": "houji",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
         "edl_vid": "05c6",
         "edl_pid": "9008",
-        "soc": "Qualcomm Snapdragon 685",
+        "chipset": "Snapdragon 8 Gen 3 / Dimensity 8300/9300+",
         "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
         "flash_methods": ["fastboot", "edl", "miflash"],
-        "notes": "Xiaomi-specific fastboot commands may be needed"
+        "functions": ["Mi Account", "FRP", "Flash", "Bootloader"],
+        "notes": "Xiaomi 14, 14 Pro, 14T, 14T Pro"
+      },
+      {
+        "name": "Xiaomi 13 Series",
+        "codename": "fuxi",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "Snapdragon 8 Gen 2 / Dimensity 8200/9200+",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash"],
+        "notes": "Xiaomi 13, 13 Pro, 13T, 13T Pro"
+      },
+      {
+        "name": "Xiaomi 12 Series",
+        "codename": "zeus",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "Snapdragon 8 Gen 1 / Dimensity 8100",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash"],
+        "notes": "Xiaomi 12, 12 Pro, 12T, 12T Pro"
+      },
+      {
+        "name": "Redmi Note 14 Series",
+        "codename": "various",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "SD 7s Gen 3 / Dimensity 7300/9300+",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash", "IMEI"],
+        "notes": "Redmi Note 14, 14 Pro, 14 Pro+"
+      },
+      {
+        "name": "Redmi Note 13 Series",
+        "codename": "gold",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "SD 685/7s Gen 2 / Dimensity 7200U",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash", "IMEI"],
+        "notes": "Redmi Note 13, 13 Pro, 13 Pro+, 13 5G"
+      },
+      {
+        "name": "Redmi Note 12 Series",
+        "codename": "topaz",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "SD 685/732G/4 Gen 1 / Dimensity 1080",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash", "IMEI"],
+        "notes": "Redmi Note 12, 12 Pro, 12 Pro+, 12 5G, 12 Turbo"
+      },
+      {
+        "name": "Redmi Note 11 Series",
+        "codename": "various",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "SD 680/695 / Dimensity 810 / Helio G96",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash", "IMEI"],
+        "notes": "Redmi Note 11, 11 Pro, 11 5G, 11S"
+      },
+      {
+        "name": "Redmi 13 / 12 / 10 Series",
+        "codename": "various",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "Helio G88/G85/G91 Ultra",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash", "IMEI"],
+        "notes": "Redmi 13, 13C, 12, 12C, 10, 10A, 10C"
+      },
+      {
+        "name": "POCO F / X / M Series",
+        "codename": "various",
+        "vid": "2717",
+        "pid": "ff48",
+        "fastboot_pid": "ff40",
+        "edl_vid": "05c6",
+        "edl_pid": "9008",
+        "chipset": "SD 8s Gen 3 / Dimensity 8300 / Helio G99",
+        "partitions": ["boot", "system", "vendor", "recovery", "dtbo"],
+        "flash_methods": ["fastboot", "edl", "miflash"],
+        "functions": ["Mi Account", "FRP", "Flash", "IMEI"],
+        "notes": "POCO F6, F5, X6 Pro, X5, M6 Pro, M5"
+      }
+    ],
+    "huawei": [
+      {
+        "name": "Huawei P Series",
+        "codename": "Various",
+        "vid": "12d1",
+        "pid": "0001",
+        "chipset": "Kirin 980/990/9000",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["hisuite", "fastboot"],
+        "functions": ["Huawei ID Remove", "FRP", "Flash"],
+        "notes": "P30, P30 Pro, P40, P40 Pro, P50, P50 Pro"
+      },
+      {
+        "name": "Huawei Mate Series",
+        "codename": "Various",
+        "vid": "12d1",
+        "pid": "0001",
+        "chipset": "Kirin 980/990/9000",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["hisuite", "fastboot"],
+        "functions": ["Huawei ID Remove", "FRP", "Flash"],
+        "notes": "Mate 20, 20 Pro, 30, 30 Pro, 40, 40 Pro"
+      },
+      {
+        "name": "Huawei Nova Series",
+        "codename": "Various",
+        "vid": "12d1",
+        "pid": "0001",
+        "chipset": "Kirin 810/820/985/769",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["hisuite", "fastboot"],
+        "functions": ["Huawei ID Remove", "FRP"],
+        "notes": "Nova 5T, 7, 7i, 8, 9, 10"
+      },
+      {
+        "name": "Huawei Y / Enjoy Series",
+        "codename": "Various",
+        "vid": "12d1",
+        "pid": "0001",
+        "chipset": "Kirin 710/659 / MTK",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["hisuite", "fastboot"],
+        "functions": ["Huawei ID Remove", "FRP"],
+        "notes": "Y6, Y7, Y8, Y9, Y9s, GR3, GR5"
+      }
+    ],
+    "honor": [
+      {
+        "name": "Honor 50 / 60 / 70 / 90 Series",
+        "codename": "Various",
+        "vid": "12d1",
+        "pid": "0001",
+        "chipset": "Snapdragon 778G / 900",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["Honor ID Remove", "FRP", "Flash"],
+        "notes": "Honor 50, 50 Pro, 60, 70, 90"
+      },
+      {
+        "name": "Honor X / Play Series",
+        "codename": "Various",
+        "vid": "12d1",
+        "pid": "0001",
+        "chipset": "Dimensity 6020 / Kirin 710",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["Honor ID Remove", "FRP"],
+        "notes": "Honor X8, X9, X30, Play 40, Play 50"
+      }
+    ],
+    "oppo": [
+      {
+        "name": "OPPO Reno Series",
+        "codename": "Various",
+        "vid": "22d9",
+        "pid": "2765",
+        "chipset": "SD 765G / Dimensity 900/1080/8200",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock", "IMEI"],
+        "notes": "Reno 5, 6, 7, 8, 10, 11, 11F 5G"
+      },
+      {
+        "name": "OPPO A Series",
+        "codename": "Various",
+        "vid": "22d9",
+        "pid": "2765",
+        "chipset": "Helio G85/G35 / SD 680",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "A54, A55, A57, A58, A74, A76, A77, A78, A96"
+      },
+      {
+        "name": "OPPO Find X Series",
+        "codename": "Various",
+        "vid": "22d9",
+        "pid": "2765",
+        "chipset": "SD 870 / SD 8 Gen 1",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash"],
+        "notes": "Find X3, X3 Pro, X5, X5 Pro, X6"
+      }
+    ],
+    "realme": [
+      {
+        "name": "Realme GT / Number Series",
+        "codename": "Various",
+        "vid": "2a70",
+        "pid": "9093",
+        "chipset": "SD 888 / Dimensity 8200/7050",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "Realme GT 2, GT 3, 11 Pro, 12 Pro, Narzo 60"
+      },
+      {
+        "name": "Realme C / Note Series",
+        "codename": "Various",
+        "vid": "2a70",
+        "pid": "9093",
+        "chipset": "Helio G88/G85/G99 / Dimensity 6100+",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "IMEI", "Screen Lock"],
+        "notes": "Realme C55, C65, C35, C30, Note 50, Note 60"
+      }
+    ],
+    "vivo": [
+      {
+        "name": "Vivo V Series",
+        "codename": "Various",
+        "vid": "2d95",
+        "pid": "5a01",
+        "chipset": "Dimensity 810/1200/7200/8200",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock", "IMEI"],
+        "notes": "V21, V23, V25, V27, V29, V30"
+      },
+      {
+        "name": "Vivo Y Series",
+        "codename": "Various",
+        "vid": "2d95",
+        "pid": "5a01",
+        "chipset": "Helio G85/P35 / Dimensity 700/810",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock", "IMEI"],
+        "notes": "Y21, Y33s, Y55, Y75, Y76, Y78, Y100"
+      },
+      {
+        "name": "Vivo X Series",
+        "codename": "Various",
+        "vid": "2d95",
+        "pid": "5a01",
+        "chipset": "SD 870 / Dimensity 9000",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash"],
+        "notes": "X60, X70, X80, X90"
+      },
+      {
+        "name": "Vivo MTK Preloader Models",
+        "codename": "Various",
+        "vid": "0e8d",
+        "pid": "0003",
+        "chipset": "MT6765 / MT6833 / MT6877",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["preloader", "flash_tool"],
+        "functions": ["FRP", "Flash", "IMEI"],
+        "notes": "Y16, Y22, Y35, iQOO Z7, iQOO Neo 7"
+      }
+    ],
+    "motorola": [
+      {
+        "name": "Moto G Series",
+        "codename": "Various",
+        "vid": "22b8",
+        "pid": "2e24",
+        "chipset": "SD 480/695/778G / Dimensity 7020",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock", "MDM"],
+        "notes": "Moto G32, G42, G52, G54, G62, G72, G82, G84, G85, G200"
+      },
+      {
+        "name": "Moto Edge Series",
+        "codename": "Various",
+        "vid": "22b8",
+        "pid": "2e24",
+        "chipset": "SD 778G / SD 8 Gen 1 / Dimensity 8020",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "MDM", "Bootloader"],
+        "notes": "Edge 20, 30, 40, 40 Neo, 50"
+      },
+      {
+        "name": "Moto E Series",
+        "codename": "Various",
+        "vid": "22b8",
+        "pid": "2e24",
+        "chipset": "Helio G25/G37 / SD 480",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Moto E13, E22, E32, E40"
+      },
+      {
+        "name": "Motorola MTK Preloader Models",
+        "codename": "Various",
+        "vid": "0e8d",
+        "pid": "0003",
+        "chipset": "Dimensity 6100+ / MT6853",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["preloader", "flash_tool"],
+        "functions": ["FRP", "Flash"],
+        "notes": "Moto G34, G54 5G (MTK), G Stylus 5G"
+      }
+    ],
+    "tecno": [
+      {
+        "name": "Tecno Spark / Camon / Pova Series",
+        "codename": "Various",
+        "vid": "25c7",
+        "pid": "0013",
+        "chipset": "Helio G85/G88 / Dimensity 6080",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "preloader"],
+        "functions": ["FRP", "Flash", "Screen Lock", "IMEI"],
+        "notes": "Spark 10, Spark 20, Camon 20, Camon 30, Pova 5, Pova 6"
+      }
+    ],
+    "infinix": [
+      {
+        "name": "Infinix Hot / Note / Zero Series",
+        "codename": "Various",
+        "vid": "25c7",
+        "pid": "0013",
+        "chipset": "Helio G85/G99 / Dimensity 6080",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "preloader"],
+        "functions": ["FRP", "Flash", "Screen Lock", "IMEI"],
+        "notes": "Hot 30, Hot 40, Note 30, Note 40, Zero 30"
+      }
+    ],
+    "itel": [
+      {
+        "name": "ITEL P / S / A / Vision Series",
+        "codename": "Various",
+        "vid": "25c7",
+        "pid": "0013",
+        "chipset": "Unisoc SC9863 / Helio A22/G25",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "preloader"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "P40, P55, S24, A70, Vision 3"
+      }
+    ],
+    "zte": [
+      {
+        "name": "ZTE Nubia Red Magic Series",
+        "codename": "NX679J",
+        "vid": "19d2",
+        "pid": "0001",
+        "chipset": "Snapdragon 8 Gen 1",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock", "MDM"],
+        "notes": "Red Magic 7"
+      },
+      {
+        "name": "ZTE Nubia Z Series",
+        "codename": "NX721J",
+        "vid": "19d2",
+        "pid": "0001",
+        "chipset": "Snapdragon 8 Gen 3",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock", "MDM"],
+        "notes": "Nubia Z60 Ultra"
+      },
+      {
+        "name": "ZTE Nubia Play",
+        "codename": "NX651J",
+        "vid": "19d2",
+        "pid": "0001",
+        "chipset": "Snapdragon 765G",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Nubia Play"
+      },
+      {
+        "name": "ZTE Nubia Red Magic Tablet",
+        "codename": "NP01J",
+        "vid": "19d2",
+        "pid": "0001",
+        "chipset": "Snapdragon 8+ Gen 1",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Red Magic Tablet"
+      },
+      {
+        "name": "ZTE Red Magic Tablet 3D",
+        "codename": "NP02J",
+        "vid": "19d2",
+        "pid": "0001",
+        "chipset": "Snapdragon 8 Gen 2",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot", "download"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Red Magic Tablet 3D"
+      }
+    ],
+    "lenovo": [
+      {
+        "name": "Lenovo Tab M10 Series",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6009",
+        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Tab M10, M10 FHD, M10 Plus, M10 HD"
+      },
+      {
+        "name": "Lenovo Tab M11 Series",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6010",
+        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Tab M11, M11 Plus"
+      },
+      {
+        "name": "Lenovo Tab P11 Series",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6011",
+        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Tab P11, P11 Plus, P11 Pro"
+      },
+      {
+        "name": "Lenovo Tab P12 Series",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6012",
+        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Tab P12, P12 Pro, P12 Pro Plus"
+      },
+      {
+        "name": "Lenovo Tab M8 Series",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6014",
+        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Tab M8, M8 Gen 2, M8 Gen 3"
+      },
+      {
+        "name": "Lenovo Tab M7 Series",
+        "codename": "Various",
+        "vid": "17ef",
+        "pid": "6015",
+        "chipset": "Qualcomm Snapdragon / MediaTek",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["fastboot"],
+        "functions": ["FRP", "Flash", "Screen Lock"],
+        "notes": "Tab M7, M7 Gen 2, M7 Gen 3"
+      }
+    ],
+    "apple": [
+      {
+        "name": "iPhone / iPad Series",
+        "codename": "Various",
+        "vid": "05ac",
+        "pid": "1227",
+        "chipset": "Apple A-Series",
+        "partitions": ["boot", "system", "vendor", "recovery"],
+        "flash_methods": ["dfu", "recovery"],
+        "functions": ["FRP", "Flash", "Screen Lock", "iCloud"],
+        "notes": "iPhone, iPad, iPod Touch"
       }
     ]
   },
