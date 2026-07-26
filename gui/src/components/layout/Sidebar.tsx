@@ -194,18 +194,18 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   return (
-    <nav className="w-[72px] h-full glass-strong border-r border-white/5 flex flex-col items-center py-4 shrink-0 relative z-20">
+    <nav className="w-[64px] h-full glass-strong border-r border-white/5 flex flex-col shrink-0 relative z-20">
       {/* Logo */}
-      <div className="mb-6 pb-4 border-b border-white/5 w-full flex justify-center">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue via-bench-500 to-neon-purple flex items-center justify-center shadow-lg shadow-bench-500/30 animate-glow">
-          <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <div className="py-3 pb-2 border-b border-white/5 w-full flex justify-center shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-neon-blue via-bench-500 to-neon-purple flex items-center justify-center shadow-lg shadow-bench-500/30 animate-glow">
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
           </svg>
         </div>
       </div>
 
       {/* Nav Items */}
-      <div className="flex-1 flex flex-col items-center gap-1 w-full px-2">
+      <div className="flex-1 flex flex-col items-center gap-0.5 w-full px-1.5 py-2 overflow-y-auto custom-scrollbar">
         {NAV_ITEMS.map((item) => {
           const isActive = activeView === item.id
           const isHovered = hoveredItem === item.id
@@ -218,8 +218,8 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
               className={`
-                relative w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1
-                transition-all duration-300 ease-out border border-transparent
+                relative w-full rounded-lg flex flex-col items-center justify-center py-1.5
+                transition-all duration-200 ease-out border border-transparent
                 ${isActive ? colors.active : `text-white/40 ${colors.hover} border-transparent`}
                 ${isHovered && !isActive ? 'scale-105' : ''}
                 ${isActive ? 'scale-105' : ''}
@@ -227,28 +227,18 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
             >
               {/* Active indicator */}
               {isActive && (
-                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full ${colors.text.replace('text-', 'bg-')}`} />
+                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full ${colors.text.replace('text-', 'bg-')}`} />
               )}
 
               <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
                 {item.icon}
               </div>
-              <span className="text-[9px] font-medium tracking-wider uppercase">
+              <span className="text-[7px] font-medium tracking-wider uppercase mt-0.5 leading-none">
                 {item.label}
               </span>
             </button>
           )
         })}
-      </div>
-
-      {/* Bottom section */}
-      <div className="mt-auto pt-4 border-t border-white/5 w-full flex justify-center">
-        <div className="w-8 h-8 rounded-full bg-surface-4 flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-surface-5 transition-all cursor-pointer">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
       </div>
     </nav>
   )
