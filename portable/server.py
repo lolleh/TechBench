@@ -13,6 +13,7 @@ import platform
 import subprocess
 import tempfile
 import webbrowser
+import shutil
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Timer
@@ -22,6 +23,27 @@ APP_DIR = Path(__file__).parent
 FRONTEND_DIR = APP_DIR / "gui"
 AI_DIR = APP_DIR / "python" / "ai"
 DB_DIR = APP_DIR / "data" / "databases"
+
+def find_tool(name):
+    """Find adb or fastboot in PATH or common locations"""
+    path = shutil.which(name)
+    if path:
+        return path
+    
+    candidates = [
+        APP_DIR / "platform-tools" / name,
+        Path("/tmp/platform-tools") / name,
+        Path.home() / "platform-tools" / name,
+    ]
+    
+    if platform.system() == "Windows":
+        candidates = [Path(str(c) + ".exe") for c in candidates] + candidates
+    
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    
+    return name
 
 # Ensure directories exist
 DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -141,11 +163,13 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
     def _list_adb_devices(self):
         """List ADB and Fastboot devices with details"""
         devices = []
+        adb = find_tool("adb")
+        fastboot = find_tool("fastboot")
         
         # Check for ADB
         try:
             result = subprocess.run(
-                ["adb", "devices", "-l"],
+                [adb, "devices", "-l"],
                 capture_output=True, text=True, timeout=5,
                 creationflags=0x08000000 if platform.system() == "Windows" else 0
             )
@@ -179,7 +203,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         # Check for Fastboot
         try:
             result = subprocess.run(
-                ["fastboot", "devices"],
+                [fastboot, "devices"],
                 capture_output=True, text=True, timeout=5,
                 creationflags=0x08000000 if platform.system() == "Windows" else 0
             )
@@ -212,6 +236,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
     def _get_adb_props(self, serial):
         """Get ADB device properties"""
         props = {}
+        adb = find_tool("adb")
         try:
             for prop, key in [
                 ("ro.product.model", "model"),
@@ -221,7 +246,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                 ("ro.build.version.release", "android_version"),
             ]:
                 result = subprocess.run(
-                    ["adb", "-s", serial, "shell", "getprop", prop],
+                    [adb, "-s", serial, "shell", "getprop", prop],
                     capture_output=True, text=True, timeout=3,
                     creationflags=0x08000000 if platform.system() == "Windows" else 0
                 )
@@ -234,6 +259,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
     def _get_fastboot_props(self, serial):
         """Get Fastboot device properties"""
         props = {}
+        fastboot = find_tool("fastboot")
         try:
             for var, key in [
                 ("product", "product"),
@@ -241,12 +267,14 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                 ("hardware", "hardware"),
             ]:
                 result = subprocess.run(
-                    ["fastboot", "-s", serial, "getvar", var],
+                    [fastboot, "-s", serial, "getvar", var],
                     capture_output=True, text=True, timeout=3,
                     creationflags=0x08000000 if platform.system() == "Windows" else 0
                 )
-                if result.returncode == 0:
-                    for line in result.stdout.split("\n"):
+                # Fastboot outputs to stderr
+                output = result.stdout + result.stderr
+                if result.returncode == 0 or "Finished" in output:
+                    for line in output.split("\n"):
                         if f"{var}:" in line:
                             props[key] = line.split(":")[1].strip()
         except Exception:
