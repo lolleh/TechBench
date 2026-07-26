@@ -1,0 +1,54 @@
+# TianOS System Properties
+# These properties are applied to the system partition
+
+# Identity
+ro.build.display.id=TianOS-v0.1
+ro.build.version.sdk=35
+ro.build.version.release=15
+ro.build.version.security_patch=2025-01-05
+ro.build.type=userdebug
+ro.build.tags=test-keys
+ro.build.description=TianOS-Android-15
+ro.build.flavor=TianOS-userdebug
+
+# TianOS Branding
+ro.tianos.version=0.1
+ro.tianos.name=TianOS
+ro.tianos.codename=stealth
+ro.tianos.security=enabled
+ro.tianos.author=lolleh
+
+# Device Info (Lenovo Tab M11)
+ro.product.model=TB330FU
+ro.product.brand=Lenovo
+ro.product.name=barley_row_wifi
+ro.product.device=barley_row_wifi
+ro.product.board=MT6768
+
+# Performance
+dalvik.vm.heapsize=512m
+dalvik.vm.heapgrowthlimit=256m
+dalvik.vm.dex2oat-threads=4
+dalvik.vm.image-dex2oat-threads=4
+
+# Security
+persist.sys.usb.config=adb
+persist.service.adb.enable=1
+ro.adb.secure=0
+ro.debuggable=1
+ro.secure=0
+
+# Developer Options
+ro.debug.layout=true
+show.touches=1
+pointer_location=1
+
+# Network
+persist.sys.dun.override=0
+net.dns1=8.8.8.8
+net.dns2=8.8.4.4
+
+# TianOS Features
+ro.tianos.features=security,forensics,network,wireless
+ro.tianos.tools.installed=true
+ro.tianos.shell=bash
