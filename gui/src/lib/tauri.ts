@@ -29,39 +29,230 @@ export const tauri = {
         const response = await fetch(`${API_BASE}/api/devices`)
         if (response.ok) {
           const data = await response.json() as Array<Record<string, unknown>>
-          return data.map((d) => ({
-            id: d.id as string,
-            vendorId: (d.vendorId as string) || '0000',
-            productId: (d.productId as string) || '0000',
-            vendorName: (d.vendorName as string) || 'Unknown',
-            productName: (d.productName as string) || 'Unknown Device',
-            deviceType: (d.deviceType as DeviceType) || 'android',
-            bootMode: (d.bootMode as BootMode) || 'normal',
-            tools: d.mode === 'fastboot' ? ['fastboot', 'adb'] : ['adb'],
-            container: null,
-            status: 'connected' as const,
-            serial: (d.serial as string) || null,
-            chipset: (d.chipset as string) || null,
-            workspacePath: '',
-            capabilities: {
-              canFlash: d.mode === 'fastboot',
-              canReadInfo: true,
-              canBackup: d.mode === 'adb',
-              canRestore: d.mode === 'fastboot',
-              canUnlockBootloader: d.mode === 'fastboot',
-              canIsp: false,
-              canJtag: false,
-              supportedProtocols: d.mode === 'fastboot' ? ['fastboot'] : ['adb'],
-            },
-            firstSeen: new Date(),
-            lastSeen: new Date(),
-          }))
+          return data.map((d) => {
+            const mode = (d.mode as string) || 'usb'
+            const flashModes = ['fastboot', 'apple', 'edl', 'preloader', 'download', 'meta', 'flash', 'uart']
+            const backupModes = ['adb', 'apple', 'recovery']
+            return {
+              id: d.id as string,
+              vendorId: (d.vendorId as string) || '0000',
+              productId: (d.productId as string) || '0000',
+              vendorName: (d.vendorName as string) || 'Unknown',
+              productName: (d.productName as string) || 'Unknown Device',
+              deviceType: (d.deviceType as DeviceType) || 'android',
+              bootMode: (d.bootMode as BootMode) || 'normal',
+              tools: mode === 'fastboot' ? ['fastboot', 'adb']
+                : mode === 'apple' ? ['idevice', 'irecovery']
+                : mode === 'edl' ? ['edl', 'qfill']
+                : mode === 'preloader' || mode === 'meta' ? ['mtkflash']
+                : mode === 'download' ? ['odin']
+                : mode === 'diag' ? ['diag']
+                : mode === 'serial' || mode === 'uart' ? ['serial']
+                : mode === 'adb' ? ['adb']
+                : mode === 'usb' ? []
+                : ['adb'],
+              container: null,
+              status: 'connected' as const,
+              serial: (d.serial as string) || null,
+              chipset: (d.chipset as string) || null,
+              workspacePath: '',
+              capabilities: {
+                canFlash: flashModes.includes(mode),
+                canReadInfo: true,
+                canBackup: backupModes.includes(mode),
+                canRestore: flashModes.includes(mode),
+                canUnlockBootloader: mode === 'fastboot',
+                canIsp: false,
+                canJtag: false,
+                supportedProtocols: mode === 'fastboot' ? ['fastboot']
+                  : mode === 'apple' ? ['idevice']
+                  : mode === 'edl' ? ['edl', 'qualcomm']
+                  : mode === 'preloader' || mode === 'meta' ? ['mediatek', 'brom']
+                  : mode === 'download' ? ['odin', 'samsung']
+                  : mode === 'diag' ? ['diag', 'qualcomm']
+                  : mode === 'adb' || mode === 'recovery' ? ['adb']
+                  : mode === 'usb' ? ['usb']
+                  : [],
+              },
+              firstSeen: new Date(),
+              lastSeen: new Date(),
+            }
+          })
         }
       } catch {
         // API not available
       }
     }
     return []
+  },
+  fetchIosApps: async (): Promise<{ available: boolean; apps: Array<{ id: string; packageName: string; appName: string; version: string; isSystem: boolean }>; error: string }> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/ios/apps`)
+        if (response.ok) {
+          const data = await response.json() as { available: boolean; apps: Array<{ id: string; packageName: string; appName: string; version: string; isSystem: boolean }>; error: string }
+          return { available: data.available ?? false, apps: data.apps ?? [], error: data.error ?? '' }
+        }
+      } catch {
+        // API not available
+      }
+    }
+    return { available: false, apps: [], error: 'Unable to reach TechBench server' }
+  },
+  iosUninstall: async (packageName: string): Promise<{ success: boolean; message: string }> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/ios/apps/uninstall`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packageName }),
+        })
+        if (response.ok) return await response.json() as { success: boolean; message: string }
+      } catch {
+        // API not available
+      }
+    }
+    return { success: false, message: 'Unable to reach TechBench server' }
+  },
+  iosInstall: async (file: File, upgrade: boolean): Promise<{ success: boolean; message: string }> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/ios/apps/${upgrade ? 'upgrade' : 'install'}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: file,
+        })
+        if (response.ok) return await response.json() as { success: boolean; message: string }
+      } catch {
+        // API not available
+      }
+    }
+    return { success: false, message: 'Unable to reach TechBench server' }
+  },
+  runCommand: async (command: string, serial: string | null, mode: string): Promise<{ success: boolean; output: string; error: string }> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command, serial, mode }),
+        })
+        if (response.ok) return await response.json() as { success: boolean; output: string; error: string }
+      } catch {
+        // API not available
+      }
+    }
+    return { success: false, output: '', error: 'Unable to reach TechBench server' }
+  },
+  quickMediaBackup: async (serial: string | null): Promise<{
+    success: boolean
+    error: string
+    backupPath: string
+    totalFiles: number
+    totalBytes: number
+    dirs: Array<{ dir: string; ok: boolean; files: number; bytes: number; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', backupPath: '', totalFiles: 0, totalBytes: 0, dirs: [] }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/backup/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  iosMediaBackup: async (serial: string | null): Promise<{
+    success: boolean
+    error: string
+    backupPath: string
+    totalFiles: number
+    totalBytes: number
+    dirs: Array<{ dir: string; ok: boolean; files: number; bytes: number; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', backupPath: '', totalFiles: 0, totalBytes: 0, dirs: [] }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/backup/ios-media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  recoverAndroidDeleted: async (serial: string | null): Promise<{
+    success: boolean
+    error: string
+    recoveredPath: string
+    totalFiles: number
+    totalBytes: number
+    message: string
+    dirs: Array<{ dir: string; ok: boolean; files: number; bytes: number; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', recoveredPath: '', totalFiles: 0, totalBytes: 0, message: '', dirs: [] }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/recover/android-deleted`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  recoverIosDeleted: async (serial: string | null): Promise<{
+    success: boolean
+    error: string
+    recoveredPath: string
+    totalFiles: number
+    totalBytes: number
+    message: string
+    files: Array<{ dir: string; file: string; kind: string; ok: boolean; bytes: number; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', recoveredPath: '', totalFiles: 0, totalBytes: 0, message: '', files: [] }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/recover/ios-deleted`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  networkUnlock: async (serial: string | null, platform: 'android' | 'ios'): Promise<{
+    success: boolean
+    error: string
+    message: string
+    steps: Array<{ label: string; command: string; ok: boolean; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', message: '', steps: [] }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/network-unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial, platform }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
   },
 }
 

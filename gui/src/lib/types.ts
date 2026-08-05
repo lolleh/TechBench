@@ -143,6 +143,7 @@ export interface DeviceOperation {
   command: string
   requiresUnlock: boolean
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+  platform?: 'android' | 'ios'
   supportedBootModes: BootMode[]
   supportedDeviceTypes: DeviceType[]
 }
@@ -178,7 +179,7 @@ export interface InstalledApp {
   minSdk: number
 }
 
-export type AppAction = 'uninstall' | 'force_uninstall' | 'disable' | 'enable' | 'clear_data' | 'force_stop' | 'upgrade'
+export type AppAction = 'install' | 'uninstall' | 'force_uninstall' | 'disable' | 'enable' | 'clear_data' | 'force_stop' | 'upgrade'
 
 export interface AppActionExecution {
   id: string

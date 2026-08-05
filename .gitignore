@@ -69,3 +69,8 @@ credentials.json
 # Generated
 *.gen.ts
 *.gen.js
+
+# Portable runtime (local, not for the repo)
+portable/data/
+portable/platform-tools/
+portable/msys-tools/

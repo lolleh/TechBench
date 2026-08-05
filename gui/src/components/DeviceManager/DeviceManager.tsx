@@ -50,6 +50,18 @@ const ALL_OPERATIONS: DeviceOperation[] = [
     supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
   },
   {
+    id: 'erase-frp-fastboot',
+    name: 'Erase FRP (Fastboot)',
+    description: 'Remove Factory Reset Protection lock via fastboot (oem frp-erase)',
+    category: 'security',
+    icon: 'shield',
+    command: 'fastboot oem frp-erase',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
     id: 'unlock-bootloader',
     name: 'Unlock Bootloader',
     description: 'Unlock device bootloader for flashing custom firmware',
@@ -172,6 +184,495 @@ const ALL_OPERATIONS: DeviceOperation[] = [
     supportedBootModes: ['normal'],
     supportedDeviceTypes: ['android', 'xiaomi'],
   },
+  // Navigation / Reboot (ADB)
+  {
+    id: 'reboot-device',
+    name: 'Reboot Device',
+    description: 'Reboot the device normally',
+    category: 'system',
+    icon: 'power',
+    command: 'adb reboot',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'reboot-bootloader',
+    name: 'Reboot to Bootloader',
+    description: 'Reboot device into fastboot/bootloader mode',
+    category: 'system',
+    icon: 'boot',
+    command: 'adb reboot bootloader',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'reboot-recovery',
+    name: 'Reboot to Recovery',
+    description: 'Reboot device into recovery mode',
+    category: 'system',
+    icon: 'recovery',
+    command: 'adb reboot recovery',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'reboot-edl',
+    name: 'Reboot to EDL',
+    description: 'Reboot into Qualcomm Emergency Download mode',
+    category: 'system',
+    icon: 'edl',
+    command: 'adb reboot edl',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'qualcomm', 'xiaomi'],
+  },
+  {
+    id: 'reboot-download',
+    name: 'Reboot to Download Mode',
+    description: 'Reboot into Samsung/MediaTek download mode',
+    category: 'system',
+    icon: 'download',
+    command: 'adb reboot download',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'mediatek'],
+  },
+  // Navigation / Reboot (Fastboot)
+  {
+    id: 'fb-reboot',
+    name: 'Reboot Device (Fastboot)',
+    description: 'Reboot the device normally from fastboot',
+    category: 'system',
+    icon: 'power',
+    command: 'fastboot reboot',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-reboot-bootloader',
+    name: 'Reboot to Bootloader (Fastboot)',
+    description: 'Restart device into bootloader from fastboot',
+    category: 'system',
+    icon: 'boot',
+    command: 'fastboot reboot bootloader',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-reboot-recovery',
+    name: 'Reboot to Recovery (Fastboot)',
+    description: 'Restart device into recovery from fastboot',
+    category: 'system',
+    icon: 'recovery',
+    command: 'fastboot reboot recovery',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-continue',
+    name: 'Continue Boot (Fastboot)',
+    description: 'Resume normal boot from fastboot',
+    category: 'system',
+    icon: 'play',
+    command: 'fastboot continue',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-slot-a',
+    name: 'Switch to Slot A',
+    description: 'Set active boot slot to A (A/B devices)',
+    category: 'system',
+    icon: 'slot',
+    command: 'fastboot set_active a',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-slot-b',
+    name: 'Switch to Slot B',
+    description: 'Set active boot slot to B (A/B devices)',
+    category: 'system',
+    icon: 'slot',
+    command: 'fastboot set_active b',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-current-slot',
+    name: 'Show Active Slot',
+    description: 'Read the current active A/B slot',
+    category: 'system',
+    icon: 'slot',
+    command: 'fastboot getvar current-slot',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-getvar-all',
+    name: 'Get All Variables',
+    description: 'Dump all fastboot device variables',
+    category: 'system',
+    icon: 'info',
+    command: 'fastboot getvar all',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-device-info',
+    name: 'Device Info (OEM)',
+    description: 'Show OEM device info (unlock/version status)',
+    category: 'system',
+    icon: 'info',
+    command: 'fastboot oem device-info',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-erase-frp',
+    name: 'Erase FRP Partition',
+    description: 'Erase the FRP partition directly',
+    category: 'security',
+    icon: 'shield',
+    command: 'fastboot erase frp',
+    requiresUnlock: true,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-erase-cache',
+    name: 'Erase Cache',
+    description: 'Wipe the cache partition',
+    category: 'system',
+    icon: 'wipe',
+    command: 'fastboot erase cache',
+    requiresUnlock: true,
+    riskLevel: 'LOW',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'fb-format-userdata',
+    name: 'Format Userdata',
+    description: 'Format the userdata partition (full wipe)',
+    category: 'system',
+    icon: 'reset',
+    command: 'fastboot format userdata',
+    requiresUnlock: true,
+    riskLevel: 'HIGH',
+    supportedBootModes: ['fastboot'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // Device Info (ADB)
+  {
+    id: 'get-serial',
+    name: 'Read Serial Number',
+    description: 'Read the device serial number via ADB',
+    category: 'system',
+    icon: 'info',
+    command: 'adb get-serialno',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'get-battery',
+    name: 'Battery Status',
+    description: 'Show battery health, level and charging state',
+    category: 'system',
+    icon: 'battery',
+    command: 'adb shell dumpsys battery',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'get-storage',
+    name: 'Disk Usage',
+    description: 'Show filesystem/disk usage on the device',
+    category: 'system',
+    icon: 'storage',
+    command: 'adb shell df -h',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'get-cpuinfo',
+    name: 'CPU Info',
+    description: 'Dump the device CPU information',
+    category: 'system',
+    icon: 'cpu',
+    command: 'adb shell cat /proc/cpuinfo',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'get-meminfo',
+    name: 'Memory Info',
+    description: 'Dump the device memory information',
+    category: 'system',
+    icon: 'memory',
+    command: 'adb shell cat /proc/meminfo',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'get-props',
+    name: 'Dump Build Props',
+    description: 'Show all Android build/system properties',
+    category: 'system',
+    icon: 'info',
+    command: 'adb shell getprop',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'list-users',
+    name: 'List Users',
+    description: 'List all user profiles on the device',
+    category: 'system',
+    icon: 'users',
+    command: 'adb shell pm list users',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // Network toggles (ADB)
+  {
+    id: 'wifi-on',
+    name: 'Enable Wi-Fi',
+    description: 'Turn the Wi-Fi radio on via ADB',
+    category: 'network',
+    icon: 'wifi',
+    command: 'adb shell svc wifi enable',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'wifi-off',
+    name: 'Disable Wi-Fi',
+    description: 'Turn the Wi-Fi radio off via ADB',
+    category: 'network',
+    icon: 'wifi-off',
+    command: 'adb shell svc wifi disable',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'data-on',
+    name: 'Enable Mobile Data',
+    description: 'Turn mobile data on via ADB',
+    category: 'network',
+    icon: 'signal',
+    command: 'adb shell svc data enable',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'data-off',
+    name: 'Disable Mobile Data',
+    description: 'Turn mobile data off via ADB',
+    category: 'network',
+    icon: 'signal-off',
+    command: 'adb shell svc data disable',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'stay-awake-on',
+    name: 'Keep Screen On',
+    description: 'Keep the screen awake while charging',
+    category: 'system',
+    icon: 'screen',
+    command: 'adb shell svc power stayon true',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'stay-awake-off',
+    name: 'Allow Screen Off',
+    description: 'Restore default screen timeout behavior',
+    category: 'system',
+    icon: 'screen',
+    command: 'adb shell svc power stayon false',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // Security extras
+  {
+    id: 'disable-verity',
+    name: 'Disable DM-Verity',
+    description: 'Disable dm-verity verification (needs reboot to apply)',
+    category: 'security',
+    icon: 'shield',
+    command: 'adb disable-verity',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'enable-verity',
+    name: 'Enable DM-Verity',
+    description: 'Re-enable dm-verity verification (needs reboot to apply)',
+    category: 'security',
+    icon: 'shield',
+    command: 'adb enable-verity',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'check-root',
+    name: 'Check Root Access',
+    description: 'Test whether the device has root (su) access',
+    category: 'security',
+    icon: 'shield',
+    command: 'adb shell su -c id',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  // Backup extras
+  {
+    id: 'backup-all',
+    name: 'Full Backup (adb backup)',
+    description: 'Create a full app/data backup (backup.ab in portable/data)',
+    category: 'backup',
+    icon: 'backup',
+    command: 'adb backup -apk -shared -all -f backup.ab',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'quick-media-backup',
+    name: 'Quick Media Backup',
+    description: 'Copy all photos, videos, audio and documents to a folder on this laptop',
+    category: 'backup',
+    icon: 'media',
+    command: 'adb pull /sdcard media + documents',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'quick-media-backup-ios',
+    name: 'Quick Media Backup (iOS)',
+    description: 'Copy photos, videos, audio and documents off the iPhone via AFC (works with a broken screen)',
+    category: 'backup',
+    icon: 'media',
+    command: 'afcclient get -r /DCIM + Documents',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'recover-deleted-media',
+    name: 'Recover Deleted Media',
+    description: 'Pull thumbnail caches and trash/recycle folders left behind by deleted photos and videos',
+    category: 'backup',
+    icon: 'trash',
+    command: 'adb pull .thumbnails + trash folders',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'recover-deleted-media-ios',
+    name: 'Recover Deleted Media (iOS)',
+    description: 'Recover photos and videos from the iPhone Recently Deleted album via the Photos library',
+    category: 'backup',
+    icon: 'trash',
+    command: 'Photos.sqlite trashed assets -> laptop',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'network-unlock',
+    name: 'Network Unlock',
+    description: 'Check SIM/network-lock state and open the unlock code screen (Samsung NCK menu, Testing menu)',
+    category: 'network',
+    icon: 'unlock',
+    command: 'adb getprop + am start unlock codes',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek', 'lenovo', 'oppo', 'vivo', 'motorola', 'huawei', 'tecno', 'zte', 'generic'],
+  },
+  {
+    id: 'network-unlock-ios',
+    name: 'Network Unlock (iOS)',
+    description: 'Read iPhone carrier-lock / activation status (unlock is done by the carrier)',
+    category: 'network',
+    icon: 'unlock',
+    command: 'ideviceinfo activation + IMEI',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
 ]
 
 export function DeviceManager() {
@@ -184,11 +685,15 @@ export function DeviceManager() {
 
   const selectedDevice = devices.find((d) => d.id === selectedDeviceId) ?? null
 
+  const opPlatform = (op: DeviceOperation): 'android' | 'ios' =>
+    op.platform ?? (op.supportedDeviceTypes.includes('apple') ? 'ios' : 'android')
+
   const getAvailableOperations = useCallback((device: Device): DeviceOperation[] => {
+    const isIosDevice = device.deviceType === 'apple'
     return ALL_OPERATIONS.filter((op) => {
       const bootModeMatch = op.supportedBootModes.includes(device.bootMode)
-      const typeMatch = op.supportedDeviceTypes.includes(device.deviceType) || op.supportedDeviceTypes.includes('android')
-      return bootModeMatch && typeMatch
+      const platformMatch = isIosDevice ? opPlatform(op) === 'ios' : opPlatform(op) === 'android'
+      return bootModeMatch && platformMatch
     })
   }, [])
 
@@ -209,40 +714,129 @@ export function DeviceManager() {
       },
     }))
 
-    // Simulate operation execution
-    const steps = [
-      'Connecting to device...',
-      'Checking device status...',
-      'Preparing operation...',
-      'Executing command...',
-      'Verifying result...',
-      'Operation complete!',
-    ]
+    try {
+      let success: boolean
+      let output: string
+      let errorMsg: string | undefined
 
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 500))
+      if (operation.id === 'quick-media-backup') {
+        const result = await tauri.quickMediaBackup(device.serial)
+        success = result.success
+        const dirLines = (result.dirs || []).map(
+          (d) => `${d.ok ? '[OK]' : '[SKIP]'} ${d.dir}: ${d.files} file(s), ${(d.bytes / 1048576).toFixed(1)} MB`
+        )
+        output = [
+          `Backup folder: ${result.backupPath || '(none)'}`,
+          ...dirLines,
+          '',
+          `Total: ${result.totalFiles} file(s), ${(result.totalBytes / 1048576).toFixed(1)} MB`,
+          success ? '\n[OK] Media backup completed' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'Media backup failed')
+      } else if (operation.id === 'quick-media-backup-ios') {
+        const result = await tauri.iosMediaBackup(device.serial)
+        success = result.success
+        const dirLines = (result.dirs || []).map(
+          (d) => `${d.ok ? '[OK]' : '[SKIP]'} ${d.dir}: ${d.files} file(s), ${(d.bytes / 1048576).toFixed(1)} MB`
+        )
+        output = [
+          `Backup folder: ${result.backupPath || '(none)'}`,
+          ...dirLines,
+          '',
+          `Total: ${result.totalFiles} file(s), ${(result.totalBytes / 1048576).toFixed(1)} MB`,
+          success ? '\n[OK] iOS media backup completed' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'iOS media backup failed')
+      } else if (operation.id === 'recover-deleted-media') {
+        const result = await tauri.recoverAndroidDeleted(device.serial)
+        success = result.success
+        const dirLines = (result.dirs || []).map(
+          (d) => `${d.ok ? '[OK]' : '[SKIP]'} ${d.dir}: ${d.files} file(s), ${(d.bytes / 1048576).toFixed(1)} MB`
+        )
+        output = [
+          `Recovered to: ${result.recoveredPath || '(none)'}`,
+          ...dirLines,
+          '',
+          `Total: ${result.totalFiles} file(s), ${(result.totalBytes / 1048576).toFixed(1)} MB`,
+          result.message || '',
+          success ? '\n[OK] Deleted media recovery completed' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'Deleted media recovery failed')
+      } else if (operation.id === 'recover-deleted-media-ios') {
+        const result = await tauri.recoverIosDeleted(device.serial)
+        success = result.success
+        const fileLines = (result.files || []).map(
+          (f) => `${f.ok ? '[OK]' : '[SKIP]'} ${f.dir}/${f.file} (${f.kind}, ${(f.bytes / 1048576).toFixed(1)} MB)`
+        )
+        output = [
+          `Recovered to: ${result.recoveredPath || '(none)'}`,
+          ...fileLines,
+          '',
+          `Total: ${result.totalFiles} file(s), ${(result.totalBytes / 1048576).toFixed(1)} MB`,
+          result.message || '',
+          success ? '\n[OK] iOS deleted media recovery completed' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'iOS deleted media recovery failed')
+      } else if (operation.id === 'network-unlock') {
+        const result = await tauri.networkUnlock(device.serial, 'android')
+        success = result.success
+        const stepLines = (result.steps || []).map(
+          (s) => `${s.ok ? '[OK]' : '[--]'} ${s.label}: ${s.output}`
+        )
+        output = [
+          ...stepLines,
+          '',
+          result.message || '',
+          success ? '\n[OK] Network unlock check completed' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'Network unlock check failed')
+      } else if (operation.id === 'network-unlock-ios') {
+        const result = await tauri.networkUnlock(device.serial, 'ios')
+        success = result.success
+        const stepLines = (result.steps || []).map(
+          (s) => `${s.ok ? '[OK]' : '[--]'} ${s.label}: ${s.output}`
+        )
+        output = [
+          ...stepLines,
+          '',
+          result.message || '',
+          success ? '\n[OK] iPhone network lock check completed' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'iPhone network lock check failed')
+      } else {
+        const result = await tauri.runCommand(operation.command, device.serial, device.bootMode)
+        success = result.success
+        output = `${result.output ? `${result.output}\n` : ''}${success ? '[OK] Operation succeeded' : '[ERROR] Operation failed'}`
+        errorMsg = success ? undefined : (result.error || 'Operation failed')
+      }
+
       setOperationStatuses((prev) => ({
         ...prev,
         [executionId]: {
           ...prev[executionId],
-          progress: Math.round(((i + 1) / steps.length) * 100),
-          output: prev[executionId].output + `[${new Date().toLocaleTimeString()}] ${steps[i]}\n`,
+          status: success ? 'success' : 'error',
+          progress: 100,
+          endTime: new Date(),
+          error: errorMsg,
+          output: prev[executionId].output
+            + `$ ${operation.command}\n`
+            + (output ? `${output}\n` : '')
+            + (success ? '\n[OK] Operation succeeded\n' : '\n[ERROR] Operation failed\n'),
+        },
+      }))
+    } catch (err) {
+      setOperationStatuses((prev) => ({
+        ...prev,
+        [executionId]: {
+          ...prev[executionId],
+          status: 'error',
+          progress: 100,
+          endTime: new Date(),
+          error: `Execution error: ${err}`,
+          output: prev[executionId].output + `\n[ERROR] ${err}\n`,
         },
       }))
     }
-
-    const success = Math.random() > 0.2
-    setOperationStatuses((prev) => ({
-      ...prev,
-      [executionId]: {
-        ...prev[executionId],
-        status: success ? 'success' : 'error',
-        progress: 100,
-        endTime: new Date(),
-        error: success ? undefined : 'Operation failed: Device not responding',
-        output: prev[executionId].output + (success ? '[OK] Success!\n' : '[ERROR] Operation failed!\n'),
-      },
-    }))
 
     setActiveOperation(null)
   }, [])
@@ -438,8 +1032,32 @@ export function DeviceManager() {
             {activeTab === 'operations' && (
               <div className="animate-fade-in">
                 <div className="mb-4">
-                  <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Available Operations</div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[10px] text-white/30 uppercase tracking-wider">
+                      {selectedDevice.deviceType === 'apple' ? 'iOS Operations' : 'Android Operations'}
+                    </div>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                      selectedDevice.deviceType === 'apple'
+                        ? 'bg-white/5 text-white/50 border border-white/10'
+                        : 'bg-neon-green/10 text-neon-green border border-neon-green/20'
+                    }`}>
+                      {selectedDevice.deviceType === 'apple' ? 'iOS' : 'Android'}
+                    </span>
+                  </div>
+                  {getAvailableOperations(selectedDevice).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center py-16 bg-surface-2/20 rounded-2xl border border-white/5">
+                      <div className="w-14 h-14 rounded-2xl bg-surface-3/40 flex items-center justify-center mb-3">
+                        <svg className="w-7 h-7 text-white/15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-white/50 mb-1">No operations available</p>
+                      <p className="text-xs text-white/25 max-w-xs">
+                        No operations are defined for {selectedDevice.deviceType} devices in {selectedDevice.bootMode} mode.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
                     {getAvailableOperations(selectedDevice).map((operation) => {
                       const catColors = CATEGORY_COLORS[operation.category]
                       const execution = Object.values(operationStatuses).find(
@@ -504,6 +1122,7 @@ export function DeviceManager() {
                       )
                     })}
                   </div>
+                  )}
                 </div>
 
                 {/* Operation Output */}
@@ -538,7 +1157,7 @@ export function DeviceManager() {
             {/* Apps Tab */}
             {activeTab === 'apps' && (
               <div className="animate-fade-in h-[calc(100vh-280px)]">
-                <AppManager deviceSerial={selectedDevice.serial} deviceName={selectedDevice.productName} />
+                <AppManager deviceSerial={selectedDevice.serial} deviceName={selectedDevice.productName} deviceType={selectedDevice.deviceType} />
               </div>
             )}
 

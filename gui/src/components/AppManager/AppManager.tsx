@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { tauri } from '../../lib/tauri'
 import type { InstalledApp, AppAction, AppActionExecution, OperationStatus } from '../../lib/types'
 
@@ -20,9 +20,10 @@ function formatSize(bytes: number): string {
 interface AppManagerProps {
   deviceSerial: string | null
   deviceName?: string | null
+  deviceType?: string
 }
 
-export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
+export function AppManager({ deviceSerial, deviceName, deviceType }: AppManagerProps) {
   const [apps, setApps] = useState<InstalledApp[]>([])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'system' | 'user' | 'disabled'>('all')
@@ -30,8 +31,58 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
   const [executions, setExecutions] = useState<Record<string, AppActionExecution>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingUpgradeRef = useRef<string | null>(null)
 
   const loadApps = useCallback(async () => {
+    if (deviceType === 'apple') {
+      if (!deviceSerial) {
+        setApps([])
+        setLoadError(null)
+        return
+      }
+
+      setIsLoading(true)
+      setLoadError(null)
+
+      try {
+        const result = await tauri.fetchIosApps()
+        if (!result.available) {
+          setLoadError(result.error || 'iOS app management unavailable')
+          setApps([])
+          return
+        }
+
+        const detailedApps: InstalledApp[] = result.apps.map((app) => ({
+          id: app.id,
+          packageName: app.packageName,
+          appName: app.appName,
+          version: app.version || 'unknown',
+          versionCode: 0,
+          size: 0,
+          installDate: 'unknown',
+          updateDate: null,
+          isSystem: app.isSystem,
+          isDisabled: false,
+          isUpdated: false,
+          permissions: [],
+          apkPath: '',
+          dataPath: '',
+          targetSdk: 0,
+          minSdk: 0,
+        }))
+
+        detailedApps.sort((a, b) => a.appName.localeCompare(b.appName))
+        setApps(detailedApps)
+      } catch (err) {
+        setLoadError(`Failed to load iOS apps: ${err}`)
+        setApps([])
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
     if (!deviceSerial) {
       setApps([])
       setLoadError(null)
@@ -107,7 +158,7 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [deviceSerial, deviceName])
+  }, [deviceSerial, deviceName, deviceType])
 
   useEffect(() => {
     loadApps()
@@ -128,7 +179,79 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
     if (!deviceSerial) return
 
     const execId = `${app.packageName}-${action}-${Date.now()}`
+
+    if (deviceType === 'apple') {
+      if (action === 'upgrade') {
+        pendingUpgradeRef.current = app.packageName
+        fileInputRef.current?.click()
+        return
+      }
+      if (action !== 'uninstall' && action !== 'force_uninstall') {
+        setExecutions((prev) => ({
+          ...prev,
+          [execId]: {
+            id: execId,
+            appPackage: app.packageName,
+            action,
+            status: 'error',
+            progress: 100,
+            output: `[iOS] ${action.replace('_', ' ')} is not supported on iOS devices.\n`,
+            startTime: new Date(),
+            endTime: new Date(),
+            error: `Not supported on iOS: ${action}`,
+          },
+        }))
+        return
+      }
+
+      setExecutions((prev) => ({
+        ...prev,
+        [execId]: {
+          id: execId,
+          appPackage: app.packageName,
+          action,
+          status: 'running',
+          progress: 30,
+          output: `[iOS] Uninstalling ${app.appName}...\n`,
+          startTime: new Date(),
+        },
+      }))
+
+      try {
+        const result = await tauri.iosUninstall(app.packageName)
+        setExecutions((prev) => ({
+          ...prev,
+          [execId]: {
+            ...prev[execId],
+            progress: 100,
+            status: result.success ? 'success' : 'error',
+            endTime: new Date(),
+            error: result.success ? undefined : result.message,
+            output: prev[execId].output + (result.success ? `[OK] ${result.message}\n` : `[ERROR] ${result.message}\n`),
+          },
+        }))
+        if (result.success) {
+          setApps((prev) => prev.filter((a) => a.packageName !== app.packageName))
+          setSelectedApp(null)
+        }
+      } catch (err) {
+        setExecutions((prev) => ({
+          ...prev,
+          [execId]: {
+            ...prev[execId],
+            status: 'error',
+            progress: 100,
+            endTime: new Date(),
+            error: String(err),
+            output: prev[execId].output + `[ERROR] ${err}\n`,
+          },
+        }))
+      }
+      return
+    }
+
     const actionLabels: Record<AppAction, string> = {
+      install: 'Installing',
       uninstall: 'Uninstalling',
       force_uninstall: 'Force uninstalling',
       disable: 'Disabling',
@@ -139,6 +262,7 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
     }
 
     const adbCommands: Record<AppAction, string> = {
+      install: `install -r ${app.packageName}`,
       uninstall: `uninstall ${app.packageName}`,
       force_uninstall: `uninstall -k ${app.packageName}`,
       disable: `pm disable-user --user 0 ${app.packageName}`,
@@ -222,7 +346,64 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
         },
       }))
     }
-  }, [deviceSerial, deviceName])
+  }, [deviceSerial, deviceName, deviceType])
+
+  const handleIpaSelected = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    const upgrade = pendingUpgradeRef.current !== null
+    const packageName = pendingUpgradeRef.current
+    pendingUpgradeRef.current = null
+
+    const execId = `${packageName || file.name}-${upgrade ? 'upgrade' : 'install'}-${Date.now()}`
+    setExecutions((prev) => ({
+      ...prev,
+      [execId]: {
+        id: execId,
+        appPackage: packageName || file.name,
+        action: upgrade ? 'upgrade' : 'install',
+        status: 'running',
+        progress: 10,
+        output: `[iOS] ${upgrade ? 'Upgrading' : 'Installing'} ${file.name}...\n`,
+        startTime: new Date(),
+      },
+    }))
+
+    try {
+      const result = await tauri.iosInstall(file, upgrade)
+      setExecutions((prev) => ({
+        ...prev,
+        [execId]: {
+          ...prev[execId],
+          progress: 100,
+          status: result.success ? 'success' : 'error',
+          endTime: new Date(),
+          error: result.success ? undefined : result.message,
+          output: prev[execId].output + (result.success ? `[OK] ${result.message}\n` : `[ERROR] ${result.message}\n`),
+        },
+      }))
+      if (result.success) {
+        if (upgrade && packageName) {
+          setApps((prev) => prev.map((a) => a.packageName === packageName ? { ...a, isUpdated: true } : a))
+        }
+        loadApps()
+      }
+    } catch (err) {
+      setExecutions((prev) => ({
+        ...prev,
+        [execId]: {
+          ...prev[execId],
+          status: 'error',
+          progress: 100,
+          endTime: new Date(),
+          error: String(err),
+          output: prev[execId].output + `[ERROR] ${err}\n`,
+        },
+      }))
+    }
+  }, [loadApps])
 
   return (
     <div className="flex h-full gap-4">
@@ -233,6 +414,15 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
           <h2 className="text-sm font-semibold text-white/80">Installed Applications</h2>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-white/30">{filteredApps.length} apps</span>
+            {deviceType === 'apple' && (
+              <button
+                onClick={() => { pendingUpgradeRef.current = null; fileInputRef.current?.click() }}
+                disabled={isLoading || !deviceSerial}
+                className="text-[10px] px-2.5 py-1 rounded-lg bg-neon-green/10 text-neon-green border border-neon-green/30 hover:bg-neon-green/20 transition-all disabled:opacity-40"
+              >
+                Install IPA
+              </button>
+            )}
             <button
               onClick={loadApps}
               disabled={isLoading || !deviceSerial}
@@ -240,6 +430,13 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
             >
               {isLoading ? 'Loading...' : 'Refresh'}
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".ipa"
+              className="hidden"
+              onChange={handleIpaSelected}
+            />
           </div>
         </div>
 
@@ -310,7 +507,7 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="w-12 h-12 border-2 border-neon-blue/30 border-t-neon-blue rounded-full animate-spin mb-3" />
               <p className="text-sm text-white/40">Fetching installed apps...</p>
-              <p className="text-xs text-white/20 mt-1">Running: adb shell pm list packages</p>
+              <p className="text-xs text-white/20 mt-1">{deviceType === 'apple' ? 'Running: ideviceinstaller -l' : 'Running: adb shell pm list packages'}</p>
             </div>
           ) : filteredApps.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -445,29 +642,33 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                   </svg>
-                  Upgrade
+                  {deviceType === 'apple' ? 'Upgrade (.ipa)' : 'Upgrade'}
                 </button>
-                <button
-                  onClick={() => handleAction(selectedApp, selectedApp.isDisabled ? 'enable' : 'disable')}
-                  className="flex-1 btn-ghost flex items-center justify-center gap-1.5 text-xs"
-                >
-                  {selectedApp.isDisabled ? 'Enable' : 'Disable'}
-                </button>
+                {deviceType !== 'apple' && (
+                  <button
+                    onClick={() => handleAction(selectedApp, selectedApp.isDisabled ? 'enable' : 'disable')}
+                    className="flex-1 btn-ghost flex items-center justify-center gap-1.5 text-xs"
+                  >
+                    {selectedApp.isDisabled ? 'Enable' : 'Disable'}
+                  </button>
+                )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleAction(selectedApp, 'clear_data')}
-                  className="flex-1 btn-ghost flex items-center justify-center gap-1.5 text-xs"
-                >
-                  Clear Data
-                </button>
-                <button
-                  onClick={() => handleAction(selectedApp, 'force_stop')}
-                  className="flex-1 btn-ghost flex items-center justify-center gap-1.5 text-xs"
-                >
-                  Force Stop
-                </button>
-              </div>
+              {deviceType !== 'apple' && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAction(selectedApp, 'clear_data')}
+                    className="flex-1 btn-ghost flex items-center justify-center gap-1.5 text-xs"
+                  >
+                    Clear Data
+                  </button>
+                  <button
+                    onClick={() => handleAction(selectedApp, 'force_stop')}
+                    className="flex-1 btn-ghost flex items-center justify-center gap-1.5 text-xs"
+                  >
+                    Force Stop
+                  </button>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => handleAction(selectedApp, 'uninstall')}
@@ -475,12 +676,14 @@ export function AppManager({ deviceSerial, deviceName }: AppManagerProps) {
                 >
                   Uninstall
                 </button>
-                <button
-                  onClick={() => handleAction(selectedApp, 'force_uninstall')}
-                  className="flex-1 px-3 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium hover:bg-red-500/30 transition-all"
-                >
-                  Force Uninstall
-                </button>
+                {deviceType !== 'apple' && (
+                  <button
+                    onClick={() => handleAction(selectedApp, 'force_uninstall')}
+                    className="flex-1 px-3 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium hover:bg-red-500/30 transition-all"
+                  >
+                    Force Uninstall
+                  </button>
+                )}
               </div>
             </div>
 
