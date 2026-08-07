@@ -74,6 +74,7 @@ export default {
         'scan': 'scan 3s linear infinite',
         'float': 'float 6s ease-in-out infinite',
         'border-flow': 'borderFlow 3s linear infinite',
+        'marquee': 'marquee 28s linear infinite',
       },
       keyframes: {
         glow: {
@@ -136,6 +137,10 @@ export default {
           '0%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
           '100%': { backgroundPosition: '0% 50%' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
         },
       },
       backdropBlur: {

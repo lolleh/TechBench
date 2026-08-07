@@ -10,7 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "title": "TechBench - Electronics & Mobile Repair Platform",
     "windows": [
       {
         "title": "TechBench",
@@ -30,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": ["deb", "nsis", "msi"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,7 +37,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [],
+    "resources": {
+      "../../portable/server.py": "portable/server.py",
+      "../../portable/gui": "portable/gui",
+      "../../portable/python": "portable/python",
+      "../../portable/start.bat": "portable/start.bat",
+      "../../portable/TechBench.bat": "portable/TechBench.bat",
+      "../../portable/start-hidden.vbs": "portable/start-hidden.vbs",
+      "../../portable/README.txt": "portable/README.txt"
+    },
     "windows": {
       "nsis": {
         "installMode": "both",
@@ -61,29 +68,7 @@
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": [
-        {
-          "name": "adb",
-          "cmd": "adb",
-          "args": true
-        },
-        {
-          "name": "fastboot",
-          "cmd": "fastboot",
-          "args": true
-        },
-        {
-          "name": "docker",
-          "cmd": "docker",
-          "args": true
-        },
-        {
-          "name": "sigrok-cli",
-          "cmd": "sigrok-cli",
-          "args": true
-        }
-      ]
+      "open": true
     }
   }
 }

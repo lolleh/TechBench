@@ -69,6 +69,25 @@ function App() {
     return () => clearInterval(timer)
   }, [])
 
+  const [updateBusy, setUpdateBusy] = useState(false)
+  const [updateResult, setUpdateResult] = useState<{
+    success: boolean
+    error: string
+    message: string
+    behind: number
+    steps: Array<{ label: string; ok: boolean; output: string }>
+  } | null>(null)
+
+  const handleUpdate = async () => {
+    setUpdateBusy(true)
+    setUpdateResult(null)
+    try {
+      setUpdateResult(await tauri.updateApp())
+    } finally {
+      setUpdateBusy(false)
+    }
+  }
+
   const renderView = () => {
     switch (activeView) {
       case 'devices':
@@ -126,7 +145,7 @@ function App() {
       <div className="flex-1 flex flex-col relative z-10 min-w-0">
         {/* Header */}
         <header className="h-14 glass-strong border-b border-white/5 flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-blue to-bench-600 flex items-center justify-center shadow-lg shadow-neon-blue/20">
                 <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -140,7 +159,76 @@ function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          {/* Scrolling credit / support ticker */}
+          <div className="flex-1 min-w-0 px-4 overflow-hidden relative" aria-hidden>
+            <div className="flex whitespace-nowrap w-max animate-marquee">
+              {[0, 1].map((i) => (
+                <span key={i} className="flex items-center gap-3 text-xs font-mono">
+                  <span className="text-neon-cyan/80">Developed by Vamba Lolleh</span>
+                  <span className="w-1 h-1 rounded-full bg-neon-green/70" />
+                  <span className="text-white/40">For technical support contact:</span>
+                  <span className="text-neon-yellow/80">WhatsApp: +23276823323</span>
+                  <span className="mx-8 text-white/15">✦</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 shrink-0">
+            {/* Update button */}
+            <div className="relative">
+              <button
+                onClick={handleUpdate}
+                disabled={updateBusy}
+                className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
+                title="Pull the latest changes from GitHub and update the app"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 4v10m0 0l-4-4m4 4l4-4M4 20h16" />
+                </svg>
+                {updateBusy ? 'Updating...' : 'Update'}
+              </button>
+              {updateResult && !updateBusy && (
+                <div className="absolute right-0 top-full mt-2 w-80 glass-strong rounded-xl border border-white/10 p-3 z-50 animate-slide-down">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-[11px] font-semibold ${
+                      updateResult.success ? 'text-neon-green' : 'text-neon-red'
+                    }`}>
+                      {updateResult.success ? 'Update complete' : 'Update failed'}
+                    </span>
+                    <button
+                      onClick={() => setUpdateResult(null)}
+                      className="text-white/40 hover:text-white/80 transition-colors"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-white/60 mb-2 break-words">
+                    {updateResult.error || updateResult.message}
+                  </p>
+                  {updateResult.steps.length > 0 && (
+                    <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                      {updateResult.steps.map((s, i) => (
+                        <div key={i} className="flex items-start gap-2 text-[11px]">
+                          <span className={`shrink-0 ${s.ok ? 'text-neon-green' : 'text-neon-red'}`}>
+                            {s.ok ? '✓' : '✗'}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="text-white/70">{s.label}</span>
+                            {s.output && !s.ok && (
+                              <span className="block text-white/35 break-words">{s.output}</span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 text-xs text-white/40">
               <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
               <span className="font-mono">SYSTEM ACTIVE</span>

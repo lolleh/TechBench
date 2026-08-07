@@ -4,9 +4,14 @@ let psuOn = false
 let psuVoltage = 4.2
 let psuCurrentLimit = 2.0
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? `http://${window.location.hostname}:${window.location.port || '1420'}`
-  : ''
+const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+const isLocalhost = typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+const API_BASE = isTauri
+  ? 'http://127.0.0.1:1420'
+  : isLocalhost
+    ? `http://${window.location.hostname}:${window.location.port || '1420'}`
+    : ''
 
 export const tauri = {
   invoke: async (cmd: string, args?: Record<string, unknown>): Promise<unknown> => {
@@ -546,6 +551,27 @@ export const tauri = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'remove', deviceType, serial, identifier }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  updateApp: async (): Promise<{
+    success: boolean
+    error: string
+    message: string
+    behind: number
+    ahead: number
+    steps: Array<{ label: string; ok: boolean; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', message: '', behind: 0, ahead: 0, steps: [] }
+    try {
+      const response = await fetch(`${API_BASE}/api/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
       })
       if (response.ok) return await response.json() as typeof empty
     } catch {

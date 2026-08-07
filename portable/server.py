@@ -24,7 +24,10 @@ PORT = 1420
 APP_DIR = Path(__file__).parent
 FRONTEND_DIR = APP_DIR / "gui"
 AI_DIR = APP_DIR / "python" / "ai"
-DB_DIR = APP_DIR / "data" / "databases"
+# Writable data location. Desktop apps may point this at a user-writable dir
+# (bundled resources are read-only). Falls back to <APP_DIR>/data.
+DATA_DIR = Path(os.environ.get("TECHBENCH_DATA_DIR") or (APP_DIR / "data"))
+DB_DIR = DATA_DIR / "databases"
 
 def find_tool(name):
     """Find adb or fastboot in PATH or common locations"""
@@ -367,16 +370,56 @@ def _scan_tools():
 
 def _tool_output_dir():
     """Directory where file-producing tools write output."""
-    d = APP_DIR / "data" / "tools"
+    d = DATA_DIR / "tools"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 # Ensure directories exist
 DB_DIR.mkdir(parents=True, exist_ok=True)
-(APP_DIR / "data" / "projects").mkdir(parents=True, exist_ok=True)
-(APP_DIR / "data" / "firmware").mkdir(parents=True, exist_ok=True)
-(APP_DIR / "data" / "workspaces").mkdir(parents=True, exist_ok=True)
-(APP_DIR / "data" / "logs").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "projects").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "firmware").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "workspaces").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "logs").mkdir(parents=True, exist_ok=True)
+
+
+def _start_parent_watchdog():
+    """Exit the server automatically if the process that spawned it is gone.
+
+    Used by the desktop app: the server is a child of the app, so this watchdog
+    guarantees the backend stops when the app closes or crashes.
+    """
+    raw = os.environ.get("TECHBENCH_PARENT_PID")
+    if not raw:
+        return
+    try:
+        ppid = int(raw)
+    except (TypeError, ValueError):
+        return
+
+    def _parent_alive():
+        if platform.system() == "Windows":
+            try:
+                os.kill(ppid, 0)
+                return True
+            except ProcessLookupError:
+                return False
+            except PermissionError:
+                return True
+        return Path(f"/proc/{ppid}").exists()
+
+    def _watch():
+        while True:
+            time.sleep(2)
+            if not _parent_alive():
+                try:
+                    os._exit(0)
+                except Exception:
+                    pass
+
+    threading.Thread(target=_watch, daemon=True).start()
+
+
+_start_parent_watchdog()
 
 
 class TechBenchHandler(SimpleHTTPRequestHandler):
@@ -470,6 +513,8 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._handle_virtual_location()
         elif self.path.startswith("/api/mdm"):
             self._handle_mdm()
+        elif self.path.startswith("/api/update"):
+            self._handle_update()
         else:
             self.send_error(404)
 
@@ -908,7 +953,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._send_json({"success": False, "message": "No IPA archive data received"})
             return
 
-        uploads = APP_DIR / "data" / "uploads"
+        uploads = DATA_DIR / "uploads"
         uploads.mkdir(parents=True, exist_ok=True)
         ipa = uploads / f"upload-{int(time.time() * 1000)}.ipa"
 
@@ -980,7 +1025,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                         argv, capture_output=True, text=True, timeout=120,
                         encoding="utf-8", errors="replace",
                         creationflags=0x08000000 if platform.system() == "Windows" else 0,
-                        cwd=str(APP_DIR / "data"),
+                        cwd=str(DATA_DIR),
                     ), None
                 except subprocess.TimeoutExpired:
                     return None, "Command timed out after 120s"
@@ -1044,7 +1089,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                     argv = [exe] + (["-u", serial] if serial and not no_udid else []) + args
                 if tool in ("idevicescreenshot", "idevicecrashreport", "idevicebackup2") and args:
                     try:
-                        target = str(APP_DIR / "data" / args[-1])
+                        target = str(DATA_DIR / args[-1])
                         if tool == "idevicescreenshot":
                             os.makedirs(os.path.dirname(target) or target, exist_ok=True)
                         else:
@@ -1265,7 +1310,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                     "error": "pymobiledevice3 not found. Install it in ~/pyvenv (python3 -m venv ~/pyvenv && ~/pyvenv/bin/pip install pymobiledevice3).",
                 })
                 return
-            shot = APP_DIR / "data" / "mirror" / "ios-screen.png"
+            shot = DATA_DIR / "mirror" / "ios-screen.png"
             shot.parent.mkdir(parents=True, exist_ok=True)
             proc, err = _run([PYMOBILEDEVICE3, "developer", "dvt", "screenshot", str(shot), "--userspace"], 45)
             if proc is None or proc.returncode != 0:
@@ -1401,7 +1446,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             return
 
         adb = find_tool("adb")
-        base = APP_DIR / "data" / "backups" / serial / time.strftime("%Y-%m-%d_%H%M%S")
+        base = DATA_DIR / "backups" / serial / time.strftime("%Y-%m-%d_%H%M%S")
         base.mkdir(parents=True, exist_ok=True)
 
         # Verify ADB connectivity (works if USB debugging was previously authorized)
@@ -1481,7 +1526,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._send_json({"success": False, "error": "No device UDID provided", "backupPath": ""})
             return
 
-        base = APP_DIR / "data" / "backups" / udid / time.strftime("%Y-%m-%d_%H%M%S")
+        base = DATA_DIR / "backups" / udid / time.strftime("%Y-%m-%d_%H%M%S")
         base.mkdir(parents=True, exist_ok=True)
 
         idevice_id = find_tool("idevice_id")
@@ -1597,7 +1642,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             return
 
         adb = find_tool("adb")
-        base = APP_DIR / "data" / "recovered" / serial / time.strftime("%Y-%m-%d_%H%M%S")
+        base = DATA_DIR / "recovered" / serial / time.strftime("%Y-%m-%d_%H%M%S")
         base.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -1705,7 +1750,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._send_json({"success": False, "error": "No device UDID provided", "recoveredPath": ""})
             return
 
-        base = APP_DIR / "data" / "recovered" / udid / time.strftime("%Y-%m-%d_%H%M%S")
+        base = DATA_DIR / "recovered" / udid / time.strftime("%Y-%m-%d_%H%M%S")
         base.mkdir(parents=True, exist_ok=True)
 
         idevice_id = find_tool("idevice_id")
@@ -2501,7 +2546,7 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             _virtual_location_stop()
             cmd = [PYMOBILEDEVICE3, "developer", "dvt", "simulate-location", "set",
                    "--userspace", "--udid", udid, "--", str(lat), str(lng)]
-            log_file = APP_DIR / "data" / "vloc.log"
+            log_file = DATA_DIR / "vloc.log"
             log_file.parent.mkdir(parents=True, exist_ok=True)
             flags = 0
             if platform.system() == "Windows":
@@ -2749,6 +2794,135 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             "error": (f"Could not remove '{identifier}'. "
                       f"Device owners typically require a factory reset or the MDM administrator. "
                       + (detail if detail else ""))[:600]})
+
+    def _handle_update(self):
+        """Pull the latest changes from GitHub and refresh the app.
+
+        Runs: git fetch + pull in the repository that contains this server, then
+        (if frontend sources changed) rebuilds and redeploys the GUI bundle. If
+        server.py itself changed, the server restarts itself a moment later.
+        """
+        repo = APP_DIR.parent
+
+        def sh(cmd, cwd, timeout=120):
+            try:
+                r = subprocess.run(
+                    cmd, cwd=cwd, capture_output=True, text=True,
+                    encoding="utf-8", errors="replace", timeout=timeout,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                )
+                return r.returncode, (r.stdout or "") + (r.stderr or "")
+            except subprocess.TimeoutExpired:
+                return -1, "Timed out"
+            except Exception as e:
+                return -1, str(e)
+
+        steps = []
+        def step(label, cmd, cwd, timeout=120):
+            rc, out = sh(cmd, cwd, timeout)
+            ok = rc == 0
+            steps.append({"label": label, "ok": ok, "output": (out or "").strip()[:400]})
+            return ok
+
+        if shutil.which("git") is None:
+            self._send_json({"success": False, "steps": [],
+                "error": "git is not installed or not on PATH. Install git to use the update button."})
+            return
+        if not (repo / ".git").exists():
+            self._send_json({"success": False, "steps": [],
+                "error": f"No git repository found at {repo}. The update button needs the app "
+                         "to be run from a cloned copy of the GitHub repo."})
+            return
+
+        if not step("Fetching latest changes from GitHub",
+                    ["git", "fetch", "origin", "main"], repo, 120):
+            last = steps[-1]
+            self._send_json({"success": False, "steps": steps,
+                "error": "Failed to fetch from GitHub: " + last["output"]})
+            return
+
+        rc, behind_out = sh(["git", "rev-list", "--count", "HEAD..origin/main"], repo, 30)
+        rc, ahead_out = sh(["git", "rev-list", "--count", "origin/main..HEAD"], repo, 30)
+        try:
+            behind = int((behind_out or "0").strip().splitlines()[0])
+        except (ValueError, IndexError):
+            behind = 0
+        try:
+            ahead = int((ahead_out or "0").strip().splitlines()[0])
+        except (ValueError, IndexError):
+            ahead = 0
+
+        old_head = ""
+        rc, old_head = sh(["git", "rev-parse", "HEAD"], repo, 30)
+
+        if behind == 0:
+            self._send_json({"success": True, "steps": steps, "behind": 0, "ahead": ahead,
+                "message": "Already up to date with GitHub."})
+            return
+
+        if not step("Pulling latest changes", ["git", "pull", "--ff-only", "origin", "main"], repo, 120):
+            last = steps[-1]
+            hint = (" - commit or stash your local changes first." if "Your local changes" in last["output"]
+                    or "not possible" in last["output"] else "")
+            self._send_json({"success": False, "steps": steps, "behind": behind, "ahead": ahead,
+                "error": "Pull failed: " + last["output"] + hint})
+            return
+
+        rc, new_head = sh(["git", "rev-parse", "HEAD"], repo, 30)
+        rc, changed = sh(["git", "diff", "--name-only", (old_head or "").strip(), (new_head or "").strip(),
+                          "--", "gui/src", "gui/package.json", "gui/package-lock.json",
+                          "gui/tailwind.config.js", "gui/vite.config.ts", "gui/index.html"],
+                         repo, 30)
+        server_changed = False
+        rc, sv = sh(["git", "diff", "--name-only", (old_head or "").strip(), (new_head or "").strip(),
+                     "--", "portable/server.py"], repo, 30)
+        server_changed = bool((sv or "").strip())
+
+        if changed.strip():
+            pkg_changed = bool(sh(["git", "diff", "--name-only",
+                                   (old_head or "").strip(), (new_head or "").strip(),
+                                   "--", "gui/package.json", "gui/package-lock.json"],
+                                  repo, 30)[1].strip())
+            if pkg_changed:
+                step("Installing frontend dependencies", ["npm", "install"], repo / "gui", 300)
+            if step("Rebuilding interface", ["npm", "run", "build"], repo / "gui", 240):
+                step("Deploying bundle to portable server",
+                     [sys.executable, "-c",
+                      "import shutil; shutil.copytree('gui/dist', 'portable/gui', dirs_exist_ok=True)"],
+                     repo, 60)
+
+        message = f"Updated to commit {new_head.strip()[:10] if new_head.strip() else '?'} ({behind} new commit(s) pulled)."
+        if server_changed:
+            message += " Server code changed - restarting now."
+
+        if server_changed:
+            log_path = APP_DIR / ".." / ".." / "tmp" / "techbench-server.log"
+            def _restart():
+                time.sleep(2.5)
+                try:
+                    if platform.system() == "Windows":
+                        flags = 0x00000200 | 0x08000000
+                        subprocess.Popen(
+                            [sys.executable, str(APP_DIR / "server.py")],
+                            cwd=str(APP_DIR), stdin=subprocess.DEVNULL,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            creationflags=flags, close_fds=True)
+                    else:
+                        subprocess.Popen(
+                            [sys.executable, str(APP_DIR / "server.py")],
+                            cwd=str(APP_DIR), stdin=subprocess.DEVNULL,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            start_new_session=True, close_fds=True)
+                except Exception:
+                    pass
+                try:
+                    os._exit(0)
+                except Exception:
+                    pass
+            threading.Thread(target=_restart, daemon=True).start()
+
+        self._send_json({"success": True, "steps": steps, "behind": behind, "ahead": ahead,
+                         "message": message})
 
     def _get_adb_props(self, serial):
         """Get ADB device properties"""
