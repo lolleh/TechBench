@@ -1,4 +1,4 @@
-import type { Device, DeviceType, BootMode, PowerReading } from './types'
+import type { Device, DeviceType, BootMode, PowerReading, Partition, DeviceHealth } from './types'
 
 let psuOn = false
 let psuVoltage = 4.2
@@ -144,6 +144,85 @@ export const tauri = {
     }
     return { success: false, output: '', error: 'Unable to reach TechBench server' }
   },
+  fetchDeviceHealth: async (serial: string, deviceType: string): Promise<{ success: boolean; error: string; health: DeviceHealth | null }> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/device-health`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ serial, deviceType }),
+        })
+        if (response.ok) return await response.json() as { success: boolean; error: string; health: DeviceHealth | null }
+      } catch {
+        // API not available
+      }
+    }
+    return { success: false, error: 'Unable to reach TechBench server', health: null }
+  },
+  removeLock: async (serial: string | null, platform: string): Promise<{
+    success: boolean
+    removed: boolean
+    error: string
+    message: string
+    steps: Array<{ label: string; command: string; ok: boolean; output: string }>
+  }> => {
+    const empty = { success: false, removed: false, error: 'Unable to reach TechBench server', message: '', steps: [] }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/remove-lock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial, platform }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  mirrorScreenshot: async (serial: string, deviceType: string): Promise<{
+    ok: boolean
+    blob?: Blob
+    error?: string
+  }> => {
+    if (!serial || !API_BASE) return { ok: false, error: 'Unable to reach TechBench server' }
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/mirror/screenshot?serial=${encodeURIComponent(serial)}&deviceType=${encodeURIComponent(deviceType)}&t=${Date.now()}`,
+      )
+      const contentType = response.headers.get('Content-Type') || ''
+      if (response.ok && contentType.includes('image/png')) {
+        return { ok: true, blob: await response.blob() }
+      }
+      let error = `Screenshot failed (HTTP ${response.status})`
+      try {
+        const data = await response.json() as { error?: string; success?: boolean }
+        error = data.error || error
+      } catch {
+        // not JSON
+      }
+      return { ok: false, error }
+    } catch {
+      return { ok: false, error: 'Unable to reach TechBench server' }
+    }
+  },
+  mirrorInput: async (serial: string, deviceType: string, payload: Record<string, unknown>): Promise<{
+    success: boolean
+    error: string
+  }> => {
+    if (!serial || !API_BASE) return { success: false, error: 'Unable to reach TechBench server' }
+    try {
+      const response = await fetch(`${API_BASE}/api/mirror/input`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial, deviceType, ...payload }),
+      })
+      if (response.ok) return await response.json() as { success: boolean; error: string }
+    } catch {
+      // API not available
+    }
+    return { success: false, error: 'Unable to reach TechBench server' }
+  },
   quickMediaBackup: async (serial: string | null): Promise<{
     success: boolean
     error: string
@@ -247,6 +326,226 @@ export const tauri = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serial, platform }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  fetchTools: async (): Promise<Array<{
+    name: string
+    display: string
+    description: string
+    category: string
+    action: string
+    runnable: boolean
+    available: boolean
+    path: string | null
+  }>> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/tools`)
+        if (response.ok) return await response.json() as Array<{
+          name: string
+          display: string
+          description: string
+          category: string
+          action: string
+          runnable: boolean
+          available: boolean
+          path: string | null
+        }>
+      } catch {
+        // API not available
+      }
+    }
+    return []
+  },
+  fetchPartitions: async (serial: string | null, mode: string, deviceType: string): Promise<{
+    partitions: Array<{ id: string; name: string; size: number; type: Partition['type']; status: Partition['status']; node: string }>
+    error: string
+  }> => {
+    const empty = { partitions: [], error: 'Unable to reach TechBench server' }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/partitions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial, mode, deviceType }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  runTool: async (name: string, device: { mode: string; serial: string | null }): Promise<{
+    success: boolean
+    error: string
+    output: string
+    command: string
+    artifact: string | null
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', output: '', command: '', artifact: null }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/tools/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, mode: device.mode, serial: device.serial }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  jailbreakInfo: async (serial: string | null): Promise<{
+    success: boolean
+    error: string
+    device: {
+      name: string
+      marketingName: string
+      model: string
+      productType: string
+      modelNumber: string
+      iosVersion: string
+      build: string
+      serial: string
+    } | null
+    assessment: {
+      chip: string
+      checkm8: boolean
+      iosVersion: string
+      status: 'supported' | 'unsupported'
+      verdict: string
+      tools: Array<{ name: string; description: string; supported: boolean; note: string }>
+    } | null
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', device: null, assessment: null }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/jailbreak/info?serial=${encodeURIComponent(serial)}`)
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  icloudActivation: async (id: string): Promise<{
+    success: boolean
+    error: string
+    identifier: string
+    locked: boolean
+    established: boolean
+    desc: string
+    raw: Record<string, unknown>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', identifier: id, locked: false, established: false, desc: '', raw: {} }
+    if (!id || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/icloud/activation?id=${encodeURIComponent(id)}`)
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  icloudInfo: async (serial: string | null): Promise<{
+    success: boolean
+    error: string
+    device: Record<string, string> | null
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', device: null }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/icloud/info?serial=${encodeURIComponent(serial)}`)
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  stopUpdate: async (action: 'status' | 'block' | 'unblock', serial: string | null, days?: number): Promise<{
+    success: boolean
+    error: string
+    blocked: boolean
+    identifiers: string[]
+    message: string
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', blocked: false, identifiers: [], message: '' }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/apple/stop-update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, serial, days }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  virtualLocation: async (action: 'status' | 'set' | 'clear', serial: string | null, lat?: number, lng?: number): Promise<{
+    success: boolean
+    error: string
+    active: boolean
+    lat: number | null
+    lng: number | null
+    message: string
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', active: false, lat: null, lng: null, message: '' }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/apple/virtual-location`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, serial, lat, lng }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  mdmStatus: async (serial: string | null, deviceType: string): Promise<{
+    success: boolean
+    error: string
+    platform: string
+    enrolled: boolean
+    entries: Array<{ identifier: string; name: string; kind: string }>
+    message: string
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', platform: '', enrolled: false, entries: [], message: '' }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/mdm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'status', deviceType, serial }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  mdmRemove: async (serial: string | null, deviceType: string, identifier: string): Promise<{
+    success: boolean
+    error: string
+    removed: boolean
+    message: string
+    output: string
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', removed: false, message: '', output: '' }
+    if (!serial || !API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/mdm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', deviceType, serial, identifier }),
       })
       if (response.ok) return await response.json() as typeof empty
     } catch {

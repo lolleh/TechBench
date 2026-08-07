@@ -15,10 +15,14 @@ import { DeviceHealthCheck } from './components/DeviceHealth/DeviceHealth'
 import { BatchOperations } from './components/BatchOperations/BatchOperations'
 import { FirmwareLibrary } from './components/FirmwareLibrary/FirmwareLibrary'
 import { SettingsView } from './components/Settings/Settings'
+import { DeviceMirror } from './components/DeviceMirror/DeviceMirror'
+import { JailbreakTool } from './components/Jailbreak/Jailbreak'
+import { ICloudTool } from './components/iCloud/iCloud'
+import { AppleTools } from './components/AppleTools/AppleTools'
 import { tauri } from './lib/tauri'
 import { useDeviceStore } from './lib/deviceStore'
 
-type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'settings'
+type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'mirror' | 'jailbreak' | 'icloud' | 'appletools' | 'settings'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('devices')
@@ -91,6 +95,14 @@ function App() {
         return <BatchOperations />
       case 'firmware':
         return <FirmwareLibrary />
+      case 'mirror':
+        return <DeviceMirror />
+      case 'jailbreak':
+        return <JailbreakTool />
+      case 'icloud':
+        return <ICloudTool />
+      case 'appletools':
+        return <AppleTools onNavigate={(v) => setActiveView(v as View)} />
       case 'settings':
         return <SettingsView />
       default:
@@ -145,7 +157,7 @@ function App() {
 
         {/* Content Area */}
         <main className="flex-1 overflow-auto custom-scrollbar">
-          <div className="animate-fade-in">
+          <div className="animate-fade-in h-full">
             {renderView()}
           </div>
         </main>

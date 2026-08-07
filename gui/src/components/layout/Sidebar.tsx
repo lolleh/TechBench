@@ -17,6 +17,16 @@ const NAV_ITEMS = [
     color: 'neon-blue',
   },
   {
+    id: 'mirror',
+    label: 'Mirror',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+      </svg>
+    ),
+    color: 'neon-pink',
+  },
+  {
     id: 'signal',
     label: 'Signal',
     icon: (
@@ -125,6 +135,37 @@ const NAV_ITEMS = [
       </svg>
     ),
     color: 'neon-cyan',
+  },
+  {
+    id: 'jailbreak',
+    label: 'Jailbreak',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M7.5 11.5v-2a4.5 4.5 0 119 0v2m-11.25 3h13.5a1.5 1.5 0 011.5 1.5v6a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-6a1.5 1.5 0 011.5-1.5z" />
+        <path d="M9.75 16a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm4.5 0a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" />
+      </svg>
+    ),
+    color: 'neon-red',
+  },
+  {
+    id: 'icloud',
+    label: 'iCloud',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+      </svg>
+    ),
+    color: 'neon-cyan',
+  },
+  {
+    id: 'appletools',
+    label: 'VEE',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M11.42 15.17l-5.1-5.1m0 0L11.42 4.97m-5.1 5.1H21M3 3v18" />
+      </svg>
+    ),
+    color: 'neon-yellow',
   },
   {
     id: 'settings',

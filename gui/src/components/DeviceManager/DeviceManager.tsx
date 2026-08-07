@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDeviceStore } from '../../lib/deviceStore'
 import { tauri } from '../../lib/tauri'
 import type { Device, DeviceOperation, OperationExecution, OperationStatus } from '../../lib/types'
@@ -673,6 +673,200 @@ const ALL_OPERATIONS: DeviceOperation[] = [
     supportedBootModes: ['normal'],
     supportedDeviceTypes: ['apple'],
   },
+  {
+    id: 'ios-device-info',
+    name: 'Device Info (iOS)',
+    description: 'Dump full device information: model, firmware, serial, IMEI, activation state',
+    category: 'system',
+    icon: 'info',
+    command: 'ideviceinfo',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-device-name',
+    name: 'Device Name (iOS)',
+    description: 'Show the device name assigned to the iPhone',
+    category: 'system',
+    icon: 'tag',
+    command: 'idevicename',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-device-date',
+    name: 'Device Date/Time (iOS)',
+    description: 'Show the current date and time reported by the device',
+    category: 'system',
+    icon: 'clock',
+    command: 'idevicedate',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-battery-diagnostics',
+    name: 'Battery Diagnostics (iOS)',
+    description: 'Read battery gas gauge: cycle count, design capacity, health',
+    category: 'system',
+    icon: 'battery',
+    command: 'idevicediagnostics diagnostics GasGauge',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-restart',
+    name: 'Restart iPhone',
+    description: 'Restart the device via the diagnostics interface',
+    category: 'system',
+    icon: 'reset',
+    command: 'idevicediagnostics restart',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-sleep',
+    name: 'Sleep iPhone',
+    description: 'Put the device into sleep mode (disconnects from host)',
+    category: 'system',
+    icon: 'moon',
+    command: 'idevicediagnostics sleep',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-enter-recovery',
+    name: 'Enter Recovery Mode',
+    description: 'Put the iPhone into recovery mode for DFU/firmware operations',
+    category: 'system',
+    icon: 'flash',
+    command: 'ideviceenterrecovery',
+    requiresUnlock: false,
+    riskLevel: 'HIGH',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-pair',
+    name: 'Pair iPhone',
+    description: 'Establish or refresh the host pairing with the device',
+    category: 'security',
+    icon: 'link',
+    command: 'idevicepair pair',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-pairing-status',
+    name: 'Pairing Status',
+    description: 'Validate whether this host is paired and trusted with the device',
+    category: 'security',
+    icon: 'shield',
+    command: 'idevicepair validate',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-activation-status',
+    name: 'Activation Status',
+    description: 'Show activation and SIM-lock state of the iPhone',
+    category: 'network',
+    icon: 'signal',
+    command: 'ideviceinfo -k ActivationState',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-full-backup',
+    name: 'Full iOS Backup',
+    description: 'Create a full unencrypted backup of the iPhone (may take several minutes)',
+    category: 'backup',
+    icon: 'archive',
+    command: 'idevicebackup2 backup --full backups/manual-ios',
+    requiresUnlock: false,
+    riskLevel: 'MEDIUM',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-screenshot',
+    name: 'Take Screenshot',
+    description: 'Capture the iPhone screen to data/screenshots/iphone.png (needs Developer disk image)',
+    category: 'backup',
+    icon: 'camera',
+    command: 'idevicescreenshot screenshots/iphone.png',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'ios-crash-reports',
+    name: 'Pull Crash Reports',
+    description: 'Move crash reports from the device to data/crashreports/',
+    category: 'backup',
+    icon: 'bug',
+    command: 'idevicecrashreport crashreports/',
+    requiresUnlock: false,
+    riskLevel: 'LOW',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
+  {
+    id: 'remove-lock',
+    name: 'Remove Screen Lock (Android)',
+    description: 'Remove PIN, password, pattern and fingerprint without erasing data (requires root)',
+    category: 'security',
+    icon: 'shield',
+    command: 'remove-lock',
+    requiresUnlock: false,
+    riskLevel: 'HIGH',
+    supportedBootModes: ['normal', 'recovery'],
+    supportedDeviceTypes: ['android', 'samsung', 'xiaomi', 'qualcomm', 'mediatek'],
+  },
+  {
+    id: 'remove-lock-ios',
+    name: 'Remove Passcode / FaceID (iOS)',
+    description: 'Check iPhone passcode/FaceID lock state - removal needs the passcode or a DFU restore',
+    category: 'security',
+    icon: 'shield',
+    command: 'remove-lock-ios',
+    requiresUnlock: false,
+    riskLevel: 'HIGH',
+    platform: 'ios',
+    supportedBootModes: ['normal'],
+    supportedDeviceTypes: ['apple'],
+  },
 ]
 
 export function DeviceManager() {
@@ -682,8 +876,51 @@ export function DeviceManager() {
   const [activeTab, setActiveTab] = useState<'info' | 'operations' | 'tools' | 'apps'>('info')
   const [operationStatuses, setOperationStatuses] = useState<Record<string, OperationExecution>>({})
   const [activeOperation, setActiveOperation] = useState<string | null>(null)
+  const [toolList, setToolList] = useState<Array<{
+    name: string
+    display: string
+    description: string
+    category: string
+    action: string
+    runnable: boolean
+    available: boolean
+    path: string | null
+  }>>([])
+  const [runningTool, setRunningTool] = useState<string | null>(null)
+  const [toolOutput, setToolOutput] = useState<{
+    success: boolean
+    error: string
+    output: string
+    command: string
+    artifact: string | null
+  } | null>(null)
+
+  useEffect(() => {
+    tauri.fetchTools()
+      .then((tools) => setToolList(tools))
+      .catch(() => setToolList([]))
+  }, [])
 
   const selectedDevice = devices.find((d) => d.id === selectedDeviceId) ?? null
+
+  const handleRunTool = useCallback(async (name: string) => {
+    if (!selectedDevice) return
+    setRunningTool(name)
+    setToolOutput(null)
+    const mode = selectedDevice.deviceType === 'apple' ? 'apple' : selectedDevice.bootMode
+    const result = await tauri.runTool(name, { mode, serial: selectedDevice.serial })
+    setToolOutput(result)
+    setRunningTool(null)
+  }, [selectedDevice])
+
+  const deviceToolCategories = (device: Device | null): string[] => {
+    if (!device) return ['common']
+    if (device.deviceType === 'apple') return ['apple', 'common']
+    if (device.deviceType === 'android') return ['android', 'common']
+    return ['common']
+  }
+
+  const visibleTools = toolList.filter((t) => deviceToolCategories(selectedDevice).includes(t.category))
 
   const opPlatform = (op: DeviceOperation): 'android' | 'ios' =>
     op.platform ?? (op.supportedDeviceTypes.includes('apple') ? 'ios' : 'android')
@@ -803,6 +1040,32 @@ export function DeviceManager() {
           success ? '\n[OK] iPhone network lock check completed' : '',
         ].join('\n')
         errorMsg = success ? undefined : (result.error || 'iPhone network lock check failed')
+      } else if (operation.id === 'remove-lock') {
+        const result = await tauri.removeLock(device.serial, 'android')
+        success = result.success
+        const stepLines = (result.steps || []).map(
+          (s) => `${s.ok ? '[OK]' : '[--]'} ${s.label}: ${s.output}`
+        )
+        output = [
+          ...stepLines,
+          '',
+          result.message || '',
+          success && result.removed ? '\n[OK] Screen lock removed - data intact' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'Screen lock removal failed')
+      } else if (operation.id === 'remove-lock-ios') {
+        const result = await tauri.removeLock(device.serial, 'ios')
+        success = result.success
+        const stepLines = (result.steps || []).map(
+          (s) => `${s.ok ? '[OK]' : '[--]'} ${s.label}: ${s.output}`
+        )
+        output = [
+          ...stepLines,
+          '',
+          result.message || '',
+          success ? '\n[OK] Lock status checked' : '',
+        ].join('\n')
+        errorMsg = success ? undefined : (result.error || 'iPhone lock state check failed')
       } else {
         const result = await tauri.runCommand(operation.command, device.serial, device.bootMode)
         success = result.success
@@ -1165,16 +1428,78 @@ export function DeviceManager() {
             {activeTab === 'tools' && (
               <div className="animate-fade-in">
                 <div className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Available Tools</div>
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  {selectedDevice.tools.map((tool) => (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6">
+                  {visibleTools.length === 0 && (
+                    <div className="col-span-full text-xs text-white/30 py-6 text-center border border-dashed border-white/10 rounded-lg">
+                      No tools detected. Install them (e.g. <code className="text-white/50">libimobiledevice-utils</code>, platform-tools) and refresh.
+                    </div>
+                  )}
+                  {visibleTools.map((tool) => (
                     <div
-                      key={tool}
-                      className="px-3 py-2 rounded-lg bg-surface-3/60 text-white/60 border border-white/5 text-xs font-mono text-center"
+                      key={tool.name}
+                      className={`px-3 py-2 rounded-lg border text-left transition-colors ${
+                        tool.available
+                          ? 'bg-surface-3/60 border-white/5 hover:border-white/15'
+                          : 'bg-surface-3/30 border-white/5 opacity-40'
+                      }`}
                     >
-                      {tool}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-xs font-mono ${tool.available ? 'text-white/70' : 'text-white/40'}`}>{tool.display}</span>
+                        {tool.available && (
+                          <span className={`w-1.5 h-1.5 rounded-full ${runningTool === tool.name ? 'bg-neon-yellow animate-pulse' : 'bg-neon-green'}`} />
+                        )}
+                      </div>
+                      <div className="text-[10px] text-white/30 mt-0.5 truncate" title={tool.description}>{tool.description}</div>
+                      <div className="mt-2 flex gap-1.5">
+                        <button
+                          onClick={() => handleRunTool(tool.name)}
+                          disabled={!tool.available || !tool.runnable || runningTool !== null}
+                          className="text-[10px] px-2 py-1 rounded bg-neon-green/10 text-neon-green border border-neon-green/20 hover:bg-neon-green/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {runningTool === tool.name ? 'Running...' : 'Run'}
+                        </button>
+                        {!tool.available && (
+                          <span className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/30">not installed</span>
+                        )}
+                        {!tool.runnable && tool.available && (
+                          <span className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/30">stream only</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {toolOutput && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${toolOutput.success ? 'bg-neon-green/10 text-neon-green' : 'bg-red-500/10 text-red-400'}`}>
+                        {toolOutput.success ? 'SUCCESS' : 'ERROR'}
+                      </span>
+                      {toolOutput.artifact && (
+                        <a
+                          href={toolOutput.artifact}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] px-2 py-0.5 rounded bg-neon-blue/10 text-neon-blue border border-neon-blue/20 hover:bg-neon-blue/20 transition-colors"
+                        >
+                          Open artifact
+                        </a>
+                      )}
+                      <button
+                        onClick={() => setToolOutput(null)}
+                        className="ml-auto text-[10px] text-white/30 hover:text-white/60"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    {toolOutput.command && (
+                      <div className="text-[10px] text-white/30 font-mono mb-2">{toolOutput.command}</div>
+                    )}
+                    <pre className="max-h-64 overflow-auto rounded-lg bg-black/40 border border-white/10 p-3 text-[11px] font-mono text-white/70 whitespace-pre-wrap">
+                      {toolOutput.output || toolOutput.error || 'No output'}
+                    </pre>
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <button

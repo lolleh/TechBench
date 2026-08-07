@@ -316,7 +316,7 @@ export function Recovery() {
             
             <div className="bg-yellow-900/30 border border-yellow-700 rounded p-3 mb-4">
               <div className="text-sm text-gray-300">
-                This operation requires proof of device ownership. Please provide the device's IMEI number and serial number.
+                This operation requires proof of device ownership. Please provide the device&apos;s IMEI number and serial number.
               </div>
             </div>
             

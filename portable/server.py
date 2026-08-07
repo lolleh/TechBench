@@ -48,11 +48,328 @@ def find_tool(name):
     
     return name
 
+def _find_pymobiledevice3():
+    """Locate the pymobiledevice3 CLI (venv at ~/pyvenv or PATH)."""
+    p = shutil.which("pymobiledevice3")
+    if p:
+        return p
+    cand = Path.home() / "pyvenv" / "bin" / "pymobiledevice3"
+    return str(cand) if cand.exists() else None
+
+
+PYMOBILEDEVICE3 = _find_pymobiledevice3()
+
 def _strip_ansi(s):
     """Remove ANSI color/control escape sequences from tool output"""
     if not s:
         return s
     return re.sub(r"\x1b\[[0-9;]*m", "", s)
+
+
+def _apple_info_fields(udid):
+    """Run ideviceinfo and return (dict, None) or (None, error)."""
+    tool = find_tool("ideviceinfo")
+    if tool == "ideviceinfo":
+        return None, "Tool 'ideviceinfo' not found. Install libimobiledevice-utils."
+    try:
+        r = subprocess.run(
+            [tool, "-u", udid], capture_output=True, text=True, timeout=30,
+            creationflags=0x08000000 if platform.system() == "Windows" else 0,
+            encoding="utf-8", errors="replace",
+        )
+    except Exception as e:
+        return None, f"Failed to start ideviceinfo: {e}"
+    if r.returncode != 0:
+        out = ((r.stdout or "") + (r.stderr or "")).strip()
+        return None, out or f"ideviceinfo failed (exit {r.returncode})"
+    info = {}
+    for line in ((r.stdout or "") + (r.stderr or "")).splitlines():
+        if ": " in line:
+            k, v = line.split(": ", 1)
+            info[k.strip()] = v.strip()
+    return info, None
+
+
+_PRODUCT_CHIP = {
+    "iPhone5,1": "A6", "iPhone5,2": "A6", "iPhone5,3": "A6", "iPhone5,4": "A6",
+    "iPhone6,1": "A7", "iPhone6,2": "A7",
+    "iPhone7,1": "A8", "iPhone7,2": "A8",
+    "iPhone8,1": "A9", "iPhone8,2": "A9", "iPhone8,4": "A9",
+    "iPhone9,1": "A10", "iPhone9,2": "A10", "iPhone9,3": "A10", "iPhone9,4": "A10",
+    "iPhone10,1": "A11", "iPhone10,2": "A11", "iPhone10,3": "A11",
+    "iPhone10,4": "A11", "iPhone10,5": "A11", "iPhone10,6": "A11",
+    "iPhone11,2": "A12", "iPhone11,4": "A12", "iPhone11,6": "A12", "iPhone11,8": "A12",
+    "iPhone12,1": "A13", "iPhone12,3": "A13", "iPhone12,5": "A13", "iPhone12,8": "A13",
+    "iPhone13,1": "A14", "iPhone13,2": "A14", "iPhone13,3": "A14", "iPhone13,4": "A14",
+    "iPhone14,2": "A15", "iPhone14,3": "A15", "iPhone14,4": "A15", "iPhone14,5": "A15",
+    "iPhone14,7": "A15", "iPhone14,8": "A15",
+    "iPhone15,2": "A16", "iPhone15,3": "A16", "iPhone15,4": "A16", "iPhone15,5": "A16",
+    "iPhone16,1": "A17 Pro", "iPhone16,2": "A17 Pro",
+    "iPhone17,1": "A18 Pro", "iPhone17,2": "A18 Pro",
+    "iPhone17,3": "A18", "iPhone17,4": "A18",
+}
+
+_PRODUCT_NAMES = {
+    "iPhone6,1": "iPhone 5s", "iPhone6,2": "iPhone 5s",
+    "iPhone7,1": "iPhone 6 Plus", "iPhone7,2": "iPhone 6",
+    "iPhone8,1": "iPhone 6s", "iPhone8,2": "iPhone 6s Plus", "iPhone8,4": "iPhone SE (1st gen)",
+    "iPhone9,1": "iPhone 7", "iPhone9,2": "iPhone 7 Plus",
+    "iPhone9,3": "iPhone 7", "iPhone9,4": "iPhone 7 Plus",
+    "iPhone10,1": "iPhone 8", "iPhone10,4": "iPhone 8",
+    "iPhone10,2": "iPhone 8 Plus", "iPhone10,5": "iPhone 8 Plus",
+    "iPhone10,3": "iPhone X", "iPhone10,6": "iPhone X",
+    "iPhone11,8": "iPhone XR", "iPhone11,2": "iPhone XS",
+    "iPhone11,4": "iPhone XS Max", "iPhone11,6": "iPhone XS Max",
+    "iPhone12,8": "iPhone SE (2nd gen)",
+    "iPhone12,1": "iPhone 11", "iPhone12,3": "iPhone 11 Pro", "iPhone12,5": "iPhone 11 Pro Max",
+    "iPhone13,1": "iPhone 12 mini", "iPhone13,2": "iPhone 12",
+    "iPhone13,3": "iPhone 12 Pro", "iPhone13,4": "iPhone 12 Pro Max",
+    "iPhone14,4": "iPhone 13 mini", "iPhone14,5": "iPhone 13",
+    "iPhone14,2": "iPhone 13 Pro", "iPhone14,3": "iPhone 13 Pro Max",
+    "iPhone14,7": "iPhone 14", "iPhone14,8": "iPhone 14 Plus",
+    "iPhone15,2": "iPhone 14 Pro", "iPhone15,3": "iPhone 14 Pro Max",
+    "iPhone15,4": "iPhone 15", "iPhone15,5": "iPhone 15 Plus",
+    "iPhone16,1": "iPhone 15 Pro", "iPhone16,2": "iPhone 15 Pro Max",
+    "iPhone17,1": "iPhone 16 Pro", "iPhone17,2": "iPhone 16 Pro Max",
+    "iPhone17,3": "iPhone 16", "iPhone17,4": "iPhone 16 Plus",
+}
+
+def _product_marketing_name(product):
+    """Return a friendly marketing name for an Apple product identifier."""
+    if not product:
+        return ""
+    if product in _PRODUCT_NAMES:
+        return _PRODUCT_NAMES[product]
+    m = re.match(r"^(iPad\d+|iPod\d+|AppleTV\d+|Watch\d+|AudioAccessory\d+)", product)
+    return product
+
+
+def _assess_jailbreak(product, ios):
+    """Honest compatibility assessment against known jailbreak tools."""
+    major = None
+    try:
+        major = int(str(ios).split(".")[0])
+    except Exception:
+        pass
+    chip = _PRODUCT_CHIP.get(product)
+    chip_kind = "unknown"
+    if chip:
+        m = re.match(r"A(\d+)", chip)
+        chip_kind = f"A{int(m.group(1))}" if m else chip
+    checkm8 = chip_kind in ("A7", "A8", "A9", "A10", "A11")
+
+    tools = []
+
+    def add(name, desc, ok, note):
+        tools.append({"name": name, "description": desc, "supported": bool(ok), "note": note})
+
+    if major is None:
+        add("Any", "-", False, "Could not read the iOS version from the device.")
+    add("palera1n", "checkm8 DFU-based rootless jailbreak (A8-A11)", checkm8 and major is not None and major <= 17,
+        "Boots a patched kernel from DFU over USB. Applies only to A8-A11 devices.")
+    add("checkra1n", "Semi-tethered checkm8 jailbreak (A7-A11)", checkm8 and major is not None and 12 <= major <= 16,
+        "Classic checkm8 jailbreak, iOS 12-16.")
+    add("Dopamine", "Rootless jailbreak (iOS 15-16.6.1)", major is not None and 15 <= major <= 16,
+        "Modern rootless jailbreak; A12+ only up to 16.5.1.")
+    add("TrollStore", "Permanent app signing (iOS 14-16)", major is not None and 14 <= major <= 16,
+        "Installs permanent app signatures; not a full jailbreak.")
+    add("XinaA15", "Jailbreak for A12-A15 (iOS 15.x)", major == 15 and chip_kind in ("A12", "A13", "A14", "A15"),
+        "iOS 15.0-15.4.1 on A12-A15.")
+    add("unc0ver", "Legacy jailbreak (iOS 11-14)", major is not None and 11 <= major <= 14,
+        "Supports iOS 11-14 on A7-A13 devices.")
+
+    supported_any = any(t["supported"] for t in tools)
+    if major is not None and major >= 18:
+        status = "unsupported"
+        verdict = (f"No public jailbreak currently exists for iOS {ios} on this device "
+                   f"({chip or 'unknown chip'}). Modern jailbreak development is paused; "
+                   "check project releases for updates.")
+    elif supported_any:
+        status = "supported"
+        verdict = f"One or more listed tools may support this device on iOS {ios}."
+    else:
+        status = "unsupported"
+        verdict = (f"No listed jailbreak tool supports this device (chip {chip_kind}) on "
+                   f"iOS {ios}.")
+
+    return {
+        "chip": chip or "unknown",
+        "checkm8": checkm8,
+        "iosVersion": str(ios),
+        "tools": tools,
+        "status": status,
+        "verdict": verdict,
+    }
+
+
+_ACTIVATION_LOCK_URL = "https://icloud.apple.com/activationlock/query"
+
+
+def _run_tool(argv, timeout=60):
+    """Run a subprocess and return (proc, None) or (None, errstr)."""
+    try:
+        return subprocess.run(
+            argv, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=timeout,
+            creationflags=0x08000000 if platform.system() == "Windows" else 0,
+        ), None
+    except subprocess.TimeoutExpired:
+        return None, "Timed out"
+    except Exception as e:
+        return None, str(e)
+
+
+_MDM_PROFILE_HINTS = (
+    "mdm", "managed", "management", "remotemanagement",
+    "airwatch", "vmware", "intune", "microsoft", "mobileiron",
+    "meraki", "mosyle", "jamf", "kandji", "zuludesk", "workspaceone",
+    "hexnode", "fleet", "headwind", "scalefusion", "miradore", "soti",
+    "manageengine", "addigy", "csw", "m23",
+)
+
+_MDM_PKG_HINTS = (
+    "airwatch", "awagent", "vmware", "intune", "microsoft", "mobileiron",
+    "meraki", "mosyle", "jamf", "kandji", "zuludesk", "workspaceone", "hexnode",
+    "mdm", "fleetdm", "headwind", "scalefusion", "miradore", "soti",
+    "manageengine", "addigy", "androidforwork", "google.android.apps.work",
+)
+
+
+def _is_mdm_identifier(identifier, hints):
+    """Case-insensitive MDM hint match against an identifier (profile id or package)."""
+    low = (identifier or "").lower()
+    return any(h in low for h in hints)
+
+
+_VIRTUAL_LOCATION = {"pid": None, "lat": None, "lng": None}
+
+
+def _virtual_location_alive():
+    pid = _VIRTUAL_LOCATION.get("pid")
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        _VIRTUAL_LOCATION["pid"] = None
+        return False
+
+
+def _virtual_location_stop():
+    pid = _VIRTUAL_LOCATION.get("pid")
+    if pid:
+        try:
+            os.kill(pid, 9)
+        except OSError:
+            pass
+        _VIRTUAL_LOCATION["pid"] = None
+        _VIRTUAL_LOCATION["lat"] = None
+        _VIRTUAL_LOCATION["lng"] = None
+
+
+_IOS_INSTALLER_STYLE = {}
+
+def _ios_installer_style():
+    """Return 'subcommand' for ideviceinstaller 1.2.0+ or 'legacy' for 1.1.x.
+
+    1.2.0+ uses subcommands (list/install/uninstall/upgrade); 1.1.x used
+    short flags (-l, -U, -i, -g). Detected once and cached.
+    """
+    cached = _IOS_INSTALLER_STYLE.get("style")
+    if cached:
+        return cached
+    style = "legacy"
+    installer = find_tool("ideviceinstaller")
+    if installer != "ideviceinstaller":
+        try:
+            r = subprocess.run(
+                [installer, "--version"], capture_output=True, text=True, timeout=5
+            )
+            m = re.search(r"ideviceinstaller\s+(\d+)\.(\d+)", r.stdout)
+            if m and (int(m.group(1)), int(m.group(2))) >= (1, 2):
+                style = "subcommand"
+        except Exception:
+            pass
+    _IOS_INSTALLER_STYLE["style"] = style
+    return style
+
+
+# Tool registry: (binary name, display name, description, action key, runnable)
+_TOOL_DEFS = {
+    "apple": [
+        ("ideviceinfo", "Device Info", "Full device properties", "info", True),
+        ("ideviceinstaller", "App Manager", "List installed apps", "apps", True),
+        ("idevicebackup2", "Backup", "Create device backup in workspace", "backup", True),
+        ("idevicediagnostics", "Diagnostics", "IORegistry snapshot", "ioreg", True),
+        ("idevicescreenshot", "Screenshot", "Capture screen to workspace", "screenshot", True),
+        ("ideviceenterrecovery", "Enter Recovery", "Reboot into recovery mode", "recovery", True),
+        ("idevicename", "Device Name", "Read device name", "name", True),
+        ("idevicedate", "Device Date", "Read device date/time", "date", True),
+        ("idevice_id", "List UDIDs", "List connected device UDIDs", "udids", True),
+        ("idevicecrashreport", "Crash Reports", "Collect crash logs", "crash", True),
+        ("ideviceimagemounter", "Image Mounter", "Mount developer disk images", "imagemounter", True),
+        ("idevicesyslog", "Syslog", "Tail device syslog", "syslog", False),
+    ],
+    "android": [
+        ("adb", "ADB", "Android Debug Bridge", "adb_devices", True),
+        ("fastboot", "Fastboot", "Bootloader interface", "fastboot_devices", True),
+        ("heimdall", "Heimdall", "Samsung firmware flashing", "heimdall", True),
+        ("mtkclient", "MTK Client", "MediaTek preloader tooling", "mtkclient", True),
+        ("edl", "EDL", "Qualcomm EDL tool", "edl", True),
+    ],
+    "common": [
+        ("lsusb", "List USB", "Enumerate USB buses", "lsusb", True),
+        ("udevadm", "UDev Admin", "Query udev device database", "udevadm", True),
+    ],
+}
+
+_TOOL_ACTIONS = {
+    "info": lambda t, u, s: [t, "-u", u],
+    "apps": lambda t, u, s: [t, "-u", u, "list", "--all"] if _ios_installer_style() == "subcommand" else [t, "-u", u, "-l", "-o", "list_all", "-o", "xml"],
+    "backup": lambda t, u, s: [t, "-u", u, "backup", "--full", "unencrypted", str(s)],
+    "ioreg": lambda t, u, s: [t, "-u", u, "ioreg"],
+    "screenshot": lambda t, u, s: [t, "-u", u, str(s)],
+    "recovery": lambda t, u, s: [t, "-u", u],
+    "name": lambda t, u, s: [t, "-u", u],
+    "date": lambda t, u, s: [t, "-u", u],
+    "udids": lambda t, u, s: [t, "-l"],
+    "crash": lambda t, u, s: [t, "-u", u, "-e", str(s)],
+    "imagemounter": lambda t, u, s: [t, "-u", u],
+    "adb_devices": lambda t, u, s: [t, "devices", "-l"],
+    "fastboot_devices": lambda t, u, s: [t, "devices"],
+    "heimdall": lambda t, u, s: [t, "detect"],
+    "mtkclient": lambda t, u, s: [t, "print-info"],
+    "edl": lambda t, u, s: [t, "reset"],
+    "lsusb": lambda t, u, s: [t],
+    "udevadm": lambda t, u, s: [t, "info", "-a", "-n", s] if s and s.startswith("/dev/") else [t, "info", "--export"],
+}
+
+
+def _scan_tools():
+    """Return list of known tools with availability and resolved path."""
+    tools = []
+    for category, defs in _TOOL_DEFS.items():
+        for name, display, desc, action, runnable in defs:
+            path = find_tool(name)
+            tools.append({
+                "name": name,
+                "display": display,
+                "description": desc,
+                "category": category,
+                "action": action,
+                "runnable": runnable,
+                "available": path != name,
+                "path": path if path != name else None,
+            })
+    return tools
+
+
+def _tool_output_dir():
+    """Directory where file-producing tools write output."""
+    d = APP_DIR / "data" / "tools"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 # Ensure directories exist
 DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -90,6 +407,21 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         # API: List installed iOS apps
         elif self.path == "/api/ios/apps":
             self._send_json(self._list_ios_apps())
+        # API: List available tools
+        elif self.path == "/api/tools":
+            self._send_json(_scan_tools())
+        # API: Mirror screenshot (GET - streams PNG)
+        elif self.path.startswith("/api/mirror/screenshot"):
+            self._handle_mirror_screenshot()
+        # API: Jailbreak compatibility check
+        elif self.path.startswith("/api/jailbreak/info"):
+            self._handle_jailbreak_info()
+        # API: iCloud Activation Lock status check
+        elif self.path.startswith("/api/icloud/activation"):
+            self._handle_icloud_activation()
+        # API: iCloud-related device info
+        elif self.path.startswith("/api/icloud/info"):
+            self._handle_icloud_info()
         # API: Database status
         elif self.path == "/api/database":
             db_file = DB_DIR / "techbench.db"
@@ -122,6 +454,22 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._handle_ios_deleted_recovery()
         elif self.path.startswith("/api/network-unlock"):
             self._handle_network_unlock()
+        elif self.path.startswith("/api/partitions"):
+            self._handle_partitions()
+        elif self.path.startswith("/api/device-health"):
+            self._handle_device_health()
+        elif self.path.startswith("/api/remove-lock"):
+            self._handle_remove_lock()
+        elif self.path.startswith("/api/mirror/input"):
+            self._handle_mirror_input()
+        elif self.path.startswith("/api/tools/run"):
+            self._handle_tool_run()
+        elif self.path.startswith("/api/apple/stop-update"):
+            self._handle_stop_update()
+        elif self.path.startswith("/api/apple/virtual-location"):
+            self._handle_virtual_location()
+        elif self.path.startswith("/api/mdm"):
+            self._handle_mdm()
         else:
             self.send_error(404)
 
@@ -133,6 +481,15 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_png(self, data):
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", len(data))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
 
     def _list_serial_ports(self):
         """List available serial ports"""
@@ -424,8 +781,12 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             }
 
         try:
+            if _ios_installer_style() == "subcommand":
+                cmd = [installer, "-u", udid, "list", "--all", "--xml"]
+            else:
+                cmd = [installer, "-u", udid, "-l", "-o", "list_all", "-o", "xml"]
             result = subprocess.run(
-                [installer, "-u", udid, "-l", "-o", "list_all", "-o", "xml"],
+                cmd,
                 capture_output=True, text=True, timeout=20,
                 encoding="utf-8", errors="replace",
                 creationflags=0x08000000 if platform.system() == "Windows" else 0
@@ -509,8 +870,12 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             return
 
         try:
+            if _ios_installer_style() == "subcommand":
+                cmd = [installer, "-u", udid, "uninstall", package]
+            else:
+                cmd = [installer, "-u", udid, "-U", package]
             result = subprocess.run(
-                [installer, "-u", udid, "-U", package],
+                cmd,
                 capture_output=True, text=True, timeout=120,
                 encoding="utf-8", errors="replace",
                 creationflags=0x08000000 if platform.system() == "Windows" else 0
@@ -561,9 +926,14 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                 self._send_json({"success": False, "message": "Incomplete IPA upload (connection closed early)"})
                 return
 
-            flag = "-g" if upgrade else "-i"
+            if _ios_installer_style() == "subcommand":
+                cmd = [installer, "-u", udid,
+                       ("upgrade" if upgrade else "install"), str(ipa)]
+            else:
+                cmd = [installer, "-u", udid,
+                       ("-g" if upgrade else "-i"), str(ipa)]
             result = subprocess.run(
-                [installer, "-u", udid, flag, str(ipa)],
+                cmd,
                 capture_output=True, text=True, timeout=300,
                 encoding="utf-8", errors="replace",
                 creationflags=0x08000000 if platform.system() == "Windows" else 0
@@ -659,13 +1029,350 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                     "output": last_out,
                     "error": "" if ok else (last_out or f"Command failed with exit code {proc.returncode}"),
                 })
+            elif tool.startswith("idevice") or tool in ("irecovery", "usbmuxd"):
+                exe = find_tool(tool)
+                if exe == tool:
+                    self._send_json({
+                        "success": False, "output": "",
+                        "error": f"Tool '{tool}' not found. Install libimobiledevice-utils.",
+                    })
+                    return
+                no_udid = tool in ("idevice_id", "idevicediscoveryd", "usbmuxd")
+                if tool == "ideviceenterrecovery" and serial:
+                    argv = [exe] + args + [serial]
+                else:
+                    argv = [exe] + (["-u", serial] if serial and not no_udid else []) + args
+                if tool in ("idevicescreenshot", "idevicecrashreport", "idevicebackup2") and args:
+                    try:
+                        target = str(APP_DIR / "data" / args[-1])
+                        if tool == "idevicescreenshot":
+                            os.makedirs(os.path.dirname(target) or target, exist_ok=True)
+                        else:
+                            os.makedirs(target, exist_ok=True)
+                    except Exception:
+                        pass
+                proc, err = _run(argv)
+                if proc is None:
+                    self._send_json({"success": False, "output": "", "error": err})
+                    return
+                out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+                ok = proc.returncode == 0
+                self._send_json({
+                    "success": ok,
+                    "exitCode": proc.returncode,
+                    "output": out,
+                    "error": "" if ok else (out or f"Command failed with exit code {proc.returncode}"),
+                })
             else:
                 self._send_json({
                     "success": False, "output": "",
-                    "error": f"Unsupported tool '{tool}' (expected 'adb' or 'fastboot')",
+                    "error": f"Unsupported tool '{tool}' (expected 'adb', 'fastboot' or an 'idevice*' tool)",
                 })
         except Exception as e:
             self._send_json({"success": False, "output": "", "error": f"Server error: {e}"})
+
+    def _handle_device_health(self):
+        """Gather live health data from a connected device (adb or idevice)."""
+        def _empty_health():
+            return {
+                "batteryHealth": "unknown", "batteryLevel": None, "batteryCycles": None,
+                "storageUsed": None, "storageTotal": None, "imei": None,
+                "androidVersion": None, "securityPatch": None,
+                "screenLock": None, "bootloaderUnlocked": None, "rootStatus": "unknown",
+            }
+
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = json.loads(self.rfile.read(length).decode("utf-8", "replace"))
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body", "health": _empty_health()})
+            return
+
+        serial = (body.get("serial") or "").strip()
+        device_type = (body.get("deviceType") or "").strip().lower()
+        if not serial:
+            self._send_json({"success": False, "error": "No device serial provided", "health": _empty_health()})
+            return
+
+        def _run(argv, timeout=20):
+            try:
+                return subprocess.run(
+                    argv, capture_output=True, text=True, timeout=timeout,
+                    encoding="utf-8", errors="replace",
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                )
+            except Exception:
+                return None
+
+        def _adb_shell(cmd, timeout=20):
+            adb = find_tool("adb")
+            if adb == "adb":
+                return ""
+            r = _run([adb, "-s", serial, "shell", cmd], timeout)
+            return ((r.stdout or "") + (r.stderr or "")).strip() if r else ""
+
+        def _adb_getprop(prop):
+            return _adb_shell(f"getprop {prop}").strip()
+
+        health = _empty_health()
+
+        if device_type == "apple":
+            ideviceinfo = find_tool("ideviceinfo")
+            idevicediag = find_tool("idevicediagnostics")
+            if ideviceinfo == "ideviceinfo":
+                self._send_json({
+                    "success": False, "error": "Tool 'ideviceinfo' not found. Install libimobiledevice-utils.",
+                    "health": health,
+                })
+                return
+
+            def _idevice_key(key):
+                r = _run([ideviceinfo, "-u", serial, "-k", key], 15)
+                return ((r.stdout or "") + (r.stderr or "")).strip() if r else ""
+
+            health["imei"] = _idevice_key("InternationalMobileEquipmentIdentity") or None
+            health["androidVersion"] = _idevice_key("ProductVersion") or None
+            patch = _idevice_key("PasswordProtected").lower()
+            health["screenLock"] = True if patch in ("true", "yes", "1") else False if patch in ("false", "no", "0") else None
+            health["batteryLevel"] = None
+            level = _idevice_key("BatteryCurrentCapacity")
+            if level.isdigit():
+                health["batteryLevel"] = int(level)
+
+            if idevicediag != "idevicediagnostics":
+                r = _run([idevicediag, "-u", serial, "diagnostics", "GasGauge"], 25)
+                if r:
+                    gauge = ((r.stdout or "") + (r.stderr or "")).strip()
+                    cycles = re.search(r"<key>CycleCount</key>\s*<integer>(\d+)</integer>", gauge)
+                    design = re.search(r"<key>DesignCapacity</key>\s*<integer>(\d+)</integer>", gauge)
+                    full = re.search(r"<key>FullChargeCapacity</key>\s*<integer>(\d+)</integer>", gauge)
+                    if cycles:
+                        health["batteryCycles"] = int(cycles.group(1))
+                    if design and full:
+                        dc, fc = int(design.group(1)), int(full.group(1))
+                        if 0 < fc <= 100:
+                            pct = fc
+                        elif 0 < dc <= 20000 and 0 < fc <= dc:
+                            pct = round(fc / dc * 100)
+                        else:
+                            pct = None
+                        if pct is not None:
+                            health["batteryHealth"] = "good" if pct >= 85 else "fair" if pct >= 70 else "poor"
+        elif device_type == "android":
+            adb = find_tool("adb")
+            if adb == "adb":
+                self._send_json({
+                    "success": False, "error": "Tool 'adb' not found. Install platform-tools.",
+                    "health": health,
+                })
+                return
+
+            battery = _adb_shell("dumpsys battery")
+            m = re.search(r"\blevel:\s*(\d+)", battery)
+            if m:
+                health["batteryLevel"] = int(m.group(1))
+            bh = re.search(r"\bhealth:\s*(\d+)", battery)
+            if bh:
+                code = int(bh.group(1))
+                health["batteryHealth"] = {2: "good", 3: "poor", 4: "poor", 5: "poor", 7: "fair"}.get(code, "unknown")
+
+            df = _adb_shell("df /data /sdcard")
+            for line in df.splitlines():
+                row = line.split()
+                if len(row) >= 6 and (row[-1] == "/data" or row[-1] == "/sdcard"):
+                    try:
+                        size, used = int(row[1]) * 1024, int(row[2]) * 1024
+                        health["storageTotal"] = size
+                        health["storageUsed"] = used
+                    except ValueError:
+                        pass
+                    break
+
+            imei = _adb_getprop("gsm.imei") or _adb_getprop("ro.ril.oem.imei1") or _adb_getprop("persist.radio.imei")
+            if not imei:
+                sub = _adb_shell("dumpsys iphonesubinfo")
+                im = re.search(r"imei[^\d]{0,20}(\d{9,15})", sub, re.IGNORECASE)
+                imei = im.group(1) if im else None
+            health["imei"] = imei or None
+            health["androidVersion"] = _adb_getprop("ro.build.version.release") or None
+            health["securityPatch"] = _adb_getprop("ro.build.version.security_patch") or None
+
+            disabled = _adb_shell("locksettings get-disabled").lower()
+            if disabled in ("true", "1"):
+                health["screenLock"] = False
+            elif disabled in ("false", "0"):
+                health["screenLock"] = True
+            else:
+                q = _adb_shell("dumpsys lock_settings")
+                qm = re.search(r"activePasswordQuality\s*=\s*(\d+)", q)
+                health["screenLock"] = True if qm and int(qm.group(1)) > 0 else None
+
+            state = _adb_getprop("ro.boot.vbmeta.device_state").lower()
+            vb = _adb_getprop("ro.boot.verifiedbootstate").lower()
+            if state in ("unlocked", "orange") or vb in ("orange", "yellow"):
+                health["bootloaderUnlocked"] = True
+            elif state == "locked" or vb == "green":
+                health["bootloaderUnlocked"] = False
+
+            su = _adb_shell("which su")
+            su_paths = _adb_shell("ls /system/xbin/su /system/bin/su /su/bin/su /sbin/su 2>/dev/null")
+            if su or su_paths:
+                health["rootStatus"] = "rooted"
+            else:
+                health["rootStatus"] = "not_rooted"
+        else:
+            self._send_json({
+                "success": False, "error": f"Unsupported device type '{device_type}'",
+                "health": health,
+            })
+            return
+
+        self._send_json({"success": True, "health": health})
+
+    def _handle_mirror_screenshot(self):
+        """Capture a fresh screenshot of the device and return it as PNG.
+
+        Android: `adb exec-out screencap -p` streams the PNG.
+        iOS: `pymobiledevice3 developer dvt screenshot --userspace` (needs Developer
+        Mode enabled and the personalized Developer disk image mounted).
+        """
+        from urllib.parse import urlparse, parse_qs
+
+        parsed = urlparse(self.path)
+        qs = parse_qs(parsed.query)
+        serial = (qs.get("serial", [""])[0] or "").strip()
+        device_type = (qs.get("deviceType", [""])[0] or "").strip().lower()
+
+        if not serial:
+            self._send_json({"success": False, "error": "No device serial provided"})
+            return
+
+        def _run(argv, timeout=30):
+            try:
+                return subprocess.run(
+                    argv, capture_output=True, timeout=timeout,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                ), None
+            except subprocess.TimeoutExpired:
+                return None, "Timed out"
+            except Exception as e:
+                return None, str(e)
+
+        if device_type == "apple":
+            if not PYMOBILEDEVICE3:
+                self._send_json({
+                    "success": False,
+                    "error": "pymobiledevice3 not found. Install it in ~/pyvenv (python3 -m venv ~/pyvenv && ~/pyvenv/bin/pip install pymobiledevice3).",
+                })
+                return
+            shot = APP_DIR / "data" / "mirror" / "ios-screen.png"
+            shot.parent.mkdir(parents=True, exist_ok=True)
+            proc, err = _run([PYMOBILEDEVICE3, "developer", "dvt", "screenshot", str(shot), "--userspace"], 45)
+            if proc is None or proc.returncode != 0:
+                out = ""
+                if proc is not None:
+                    out = ((proc.stdout or b"") + (proc.stderr or b"")).decode("utf-8", "replace")
+                self._send_json({
+                    "success": False,
+                    "error": (out or err or "Screenshot failed")[:400] or
+                             "Screenshot failed - is the device unlocked with Developer Mode enabled?",
+                })
+                return
+            if not shot.exists():
+                self._send_json({"success": False, "error": "Screenshot produced no file"})
+                return
+            try:
+                data = shot.read_bytes()
+            except OSError as e:
+                self._send_json({"success": False, "error": f"Could not read screenshot: {e}"})
+                return
+            self._send_png(data)
+            return
+
+        # Android
+        adb = find_tool("adb")
+        if adb == "adb":
+            self._send_json({"success": False, "error": "Tool 'adb' not found. Install platform-tools."})
+            return
+        proc, err = _run([adb, "-s", serial, "exec-out", "screencap", "-p"], 20)
+        if proc is None:
+            self._send_json({"success": False, "error": err or "Screenshot failed"})
+            return
+        data = (proc.stdout or b"")
+        if proc.returncode != 0 or not data:
+            out = (proc.stderr or b"").decode("utf-8", "replace")
+            self._send_json({
+                "success": False,
+                "error": out or "Screenshot failed - is the device unlocked with USB debugging authorized?",
+            })
+            return
+        self._send_png(data)
+
+    def _handle_mirror_input(self):
+        """Inject touch/keyboard input into an Android device over adb."""
+        import shlex
+
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = json.loads(self.rfile.read(length).decode("utf-8", "replace"))
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body"})
+            return
+
+        serial = (body.get("serial") or "").strip()
+        action = (body.get("action") or "").strip()
+        device_type = (body.get("deviceType") or "").strip().lower()
+        if not serial or not action:
+            self._send_json({"success": False, "error": "Missing serial or action"})
+            return
+
+        if device_type == "apple":
+            self._send_json({
+                "success": False,
+                "error": "Input injection is not supported on iOS over USB. Only Android devices can be remote-controlled.",
+            })
+            return
+
+        adb = find_tool("adb")
+        if adb == "adb":
+            self._send_json({"success": False, "error": "Tool 'adb' not found. Install platform-tools."})
+            return
+
+        cmd = None
+        if action == "tap":
+            cmd = f"input tap {int(body.get('x', 0))} {int(body.get('y', 0))}"
+        elif action == "swipe":
+            cmd = ("input swipe %d %d %d %d %d" % (
+                int(body.get('x', 0)), int(body.get('y', 0)),
+                int(body.get('x2', 0)), int(body.get('y2', 0)),
+                int(body.get('duration', 200))))
+        elif action == "key":
+            cmd = f"input keyevent {int(body.get('key', 0))}"
+        elif action == "text":
+            text = shlex.quote((body.get('text') or "").replace(" ", "%s"))
+            cmd = f"input text {text}"
+
+        if not cmd:
+            self._send_json({"success": False, "error": f"Unknown action '{action}'"})
+            return
+
+        try:
+            r = subprocess.run(
+                [adb, "-s", serial, "shell", cmd], capture_output=True, text=True, timeout=15,
+                encoding="utf-8", errors="replace",
+                creationflags=0x08000000 if platform.system() == "Windows" else 0,
+            )
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)})
+            return
+
+        out = ((r.stdout or "") + (r.stderr or "")).strip()
+        ok = r.returncode == 0
+        self._send_json({
+            "success": ok,
+            "output": out,
+            "error": "" if ok else (out or f"Input failed (exit {r.returncode})"),
+        })
 
     # Media directories pulled during a quick backup (photos/videos/audio/docs)
     MEDIA_BACKUP_DIRS = [
@@ -1328,6 +2035,721 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                         "request the unlock from the carrier, then restore the phone."),
         })
 
+    def _handle_remove_lock(self):
+        """Remove the screen lock (PIN/password/pattern/fingerprint/FaceID) without data loss.
+
+        Android: needs root (adb root or an su binary). TechBench deletes the
+        credential and biometric database files and reboots, keeping all user data.
+        Without root, an unknown lock can only be cleared by a factory reset
+        (which erases data) - that limitation is reported honestly instead of
+        pretending otherwise.
+
+        iOS: passcode and FaceID are bound to the Secure Enclave and cannot be
+        removed over USB without the passcode or a full restore (data loss).
+        TechBench reads the lock state and explains the options.
+        """
+        def _sh(argv, timeout=30):
+            try:
+                r = subprocess.run(
+                    argv, capture_output=True, text=True, timeout=timeout,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                    encoding="utf-8", errors="replace",
+                )
+                return r, None
+            except subprocess.TimeoutExpired:
+                return None, f"Timed out after {timeout}s"
+            except Exception as e:
+                return None, str(e)
+
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = json.loads(self.rfile.read(length).decode("utf-8", "replace"))
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body", "steps": [], "message": ""})
+            return
+
+        serial = (body.get("serial") or "").strip()
+        platform = (body.get("platform") or "android").lower()
+        if not serial:
+            self._send_json({"success": False, "error": "No device serial provided", "steps": [], "message": ""})
+            return
+
+        if platform == "ios":
+            self._handle_ios_remove_lock(serial)
+            return
+
+        adb = find_tool("adb")
+        if adb == "adb":
+            self._send_json({
+                "success": False, "error": "Tool 'adb' not found. Install platform-tools.",
+                "steps": [], "message": "",
+            })
+            return
+
+        steps = []
+
+        def _step(label, command, ok, output):
+            steps.append({"label": label, "command": command,
+                          "ok": ok, "output": ((output or "").strip()[:400] or "(empty)")})
+
+        def _adb_shell(cmd, timeout=30):
+            r, e = _sh([adb, "-s", serial, "shell", cmd], timeout)
+            return ((r.stdout or "") + (r.stderr or "")).strip() if (r and not e) else ""
+
+        # 1. Connectivity
+        probe, err = _sh([adb, "-s", serial, "get-state"], 15)
+        if err or probe is None or probe.returncode != 0:
+            self._send_json({
+                "success": False,
+                "error": ("Device not reachable via ADB. Make sure USB debugging is enabled "
+                          "and the authorization prompt was accepted."),
+                "steps": steps, "message": "",
+            })
+            return
+        _step("ADB connection", "adb get-state", True, "device online")
+
+        # 2. Current lock state
+        disabled = _adb_shell("locksettings get-disabled").lower()
+        if disabled in ("true", "1"):
+            _step("Lock state", "locksettings get-disabled", True, "already disabled - nothing to remove")
+            self._send_json({
+                "success": True, "steps": steps,
+                "message": "The device already has no screen lock. No data was touched.",
+            })
+            return
+        _step("Lock state", "locksettings get-disabled", True, "a lock is set")
+
+        # 3. Try to obtain root
+        root_cmd = "adb root"
+        root_out = ""
+        r, e = _sh([adb, "-s", serial, "root"], 15)
+        if r:
+            root_out = ((r.stdout or "") + (r.stderr or "")).strip()
+        privileged = False
+        if r is None or e or "cannot run as root" in root_out.lower() or "not allowed" in root_out.lower():
+            # adb root refused - try an su binary on the device
+            su_id = _adb_shell("su -c id")
+            _step("Root (su)", "su -c id", "uid=0" in su_id,
+                  su_id or "no su binary available")
+            privileged = "uid=0" in su_id
+        else:
+            time.sleep(3)
+            if "restarting adbd" in root_out.lower():
+                _step("Root (adb root)", "adb root", True, "adbd restarted as root")
+                id_out = _adb_shell("id")
+                privileged = "uid=0" in id_out
+                _step("Verify root", "id", privileged, id_out or "not root")
+            else:
+                id_out = _adb_shell("id")
+                privileged = "uid=0" in id_out
+                _step("Verify root", "id", privileged, id_out or "not root")
+
+        if not privileged:
+            self._send_json({
+                "success": True,
+                "steps": steps,
+                "error": "",
+                "removed": False,
+                "message": ("Could not obtain root on this device. Removing a PIN/password/pattern "
+                            "without data loss requires root (an unlocked bootloader with a custom "
+                            "recovery or Magisk, or a userdebug build). A factory reset would clear "
+                            "the lock but erases all user data. Alternatively the current PIN can be "
+                            "used: Settings > Security > Screen lock."),
+            })
+            return
+
+        # 4. Delete lock credential files (root)
+        targets = [
+            "/data/system/locksettings.db",
+            "/data/system/locksettings.db-wal",
+            "/data/system/locksettings.db-shm",
+            "/data/system/gatekeeper.password.key",
+            "/data/system/gatekeeper.pattern.key",
+            "/data/system/gesture.key",
+            "/data/system/password.key",
+            "/data/system/strangerkey",
+            "/data/user_de/0/fingerprint",
+            "/data/system/users/0/fpdata",
+            "/data/system/hw_fingerprint",
+            "/data/system/sensors/hw_udfps",
+            "/data/user_de/0/facedata",
+            "/data/user_de/0/facelock",
+        ]
+        removed = 0
+        for target in targets:
+            out = _adb_shell(f"rm -rf {target} && echo removed")
+            if "removed" in out:
+                removed += 1
+        _step("Remove lock files", "rm -rf locksettings.db + gatekeeper keys",
+              removed > 0, f"{removed} credential file(s) removed")
+
+        # 5. Reboot to finish
+        r, e = _sh([adb, "-s", serial, "reboot"], 15)
+        _step("Reboot", "adb reboot", r is not None and r.returncode == 0, "rebooting device")
+
+        time.sleep(12)
+        # Wait for the device to come back
+        for _ in range(10):
+            rr, _ = _sh([adb, "-s", serial, "get-state"], 10)
+            if rr is not None and rr.returncode == 0 and rr.stdout.strip():
+                break
+            time.sleep(5)
+
+        final_disabled = _adb_shell("locksettings get-disabled").lower()
+        done = final_disabled in ("true", "1")
+        _step("Verify", "locksettings get-disabled", done, final_disabled or "not reachable yet")
+
+        self._send_json({
+            "success": done,
+            "removed": done,
+            "steps": steps,
+            "message": ("Screen lock removed. The device rebooted and should boot to the home "
+                        "screen with all data intact.") if done else
+                       ("Credential files were removed and the device was rebooted, but the lock "
+                        "state could not be verified yet. Reconnect and re-run the tool if needed."),
+        })
+
+    def _handle_ios_remove_lock(self, udid):
+        """iOS passcode/FaceID removal is bound to the Secure Enclave - explain honestly."""
+        ideviceinfo = find_tool("ideviceinfo")
+        steps = []
+        if ideviceinfo == "ideviceinfo":
+            self._send_json({
+                "success": False, "error": "Tool 'ideviceinfo' not found. Install libimobiledevice-utils.",
+                "steps": steps, "message": "",
+            })
+            return
+
+        try:
+            r = subprocess.run(
+                [ideviceinfo, "-u", udid], capture_output=True, text=True, timeout=30,
+                creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                encoding="utf-8", errors="replace",
+            )
+        except Exception as e:
+            self._send_json({"success": False, "error": f"Failed to start ideviceinfo: {e}",
+                             "steps": steps, "message": ""})
+            return
+
+        if r.returncode != 0:
+            out = ((r.stdout or "") + (r.stderr or "")).strip()
+            self._send_json({"success": False, "error": out or f"ideviceinfo failed (exit {r.returncode})",
+                             "steps": steps, "message": ""})
+            return
+
+        info = {}
+        for line in ((r.stdout or "") + (r.stderr or "")).splitlines():
+            if ": " in line:
+                k, v = line.split(": ", 1)
+                info[k.strip()] = v.strip()
+
+        protected = info.get("PasswordProtected", "").lower()
+        steps.append({"label": "Passcode protected", "command": "ideviceinfo PasswordProtected",
+                      "ok": True, "output": protected or "unknown"})
+
+        if protected in ("false", "no", "0"):
+            self._send_json({
+                "success": True, "removed": False, "steps": steps,
+                "message": "This iPhone has no passcode set. FaceID can be re-enrolled under Settings > Face ID & Passcode.",
+            })
+            return
+
+        self._send_json({
+            "success": True, "removed": False, "steps": steps,
+            "error": "",
+            "message": ("This iPhone is passcode-protected. iOS passcode and FaceID cannot be removed "
+                        "over USB without data loss - they are tied to the Secure Enclave. Apple only "
+                        "clears them by (a) entering the current passcode, or (b) restoring the device "
+                        "in DFU mode, which erases all data. There is no known exploit that removes an "
+                        "unknown iOS passcode while keeping data. Options: enter the passcode on the "
+                        "device, or restore from a recent iCloud/iTunes backup after a DFU erase."),
+        })
+
+    def _handle_jailbreak_info(self):
+        """Report device details and honest jailbreak compatibility."""
+        from urllib.parse import urlparse, parse_qs
+
+        parsed = urlparse(self.path)
+        qs = parse_qs(parsed.query)
+        udid = (qs.get("serial", [""])[0] or "").strip()
+        if not udid:
+            self._send_json({"success": False, "error": "No device serial provided"})
+            return
+
+        info, err = _apple_info_fields(udid)
+        if err:
+            self._send_json({"success": False, "error": err})
+            return
+
+        product = info.get("ProductType", "")
+        ios = info.get("ProductVersion", "") or info.get("HumanReadableProductVersionString", "")
+        assessment = _assess_jailbreak(product, ios)
+        self._send_json({
+            "success": True,
+            "device": {
+                "name": info.get("DeviceName", ""),
+                "marketingName": _product_marketing_name(product),
+                "model": info.get("HardwareModel", ""),
+                "productType": product,
+                "modelNumber": info.get("ModelNumber", ""),
+                "iosVersion": ios,
+                "build": info.get("BuildVersion", ""),
+                "serial": info.get("SerialNumber", ""),
+            },
+            "assessment": assessment,
+        })
+
+    def _handle_icloud_activation(self):
+        """Query Apple's public Activation Lock status endpoint by serial or IMEI."""
+        import urllib.request
+        from urllib.parse import urlparse, parse_qs
+
+        parsed = urlparse(self.path)
+        qs = parse_qs(parsed.query)
+        identifier = (qs.get("id", [""])[0] or "").strip()
+        if not identifier:
+            self._send_json({"success": False, "error": "No serial or IMEI provided"})
+            return
+
+        payload = {"imei": identifier} if (identifier.isdigit() and len(identifier) == 15) else {"sn": identifier}
+        try:
+            req = urllib.request.Request(
+                _ACTIVATION_LOCK_URL,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "TechBench/0.1"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                raw = resp.read().decode("utf-8", "replace")
+        except Exception as e:
+            self._send_json({
+                "success": False,
+                "error": f"Could not reach Apple activation-lock service ({e}). "
+                         "Check that this machine has internet access to icloud.apple.com.",
+            })
+            return
+
+        try:
+            data = json.loads(raw)
+        except Exception:
+            self._send_json({"success": False, "error": "Unexpected response from Apple", "raw": raw[:500]})
+            return
+
+        locked = bool(data.get("locked") or data.get("FMiPState") is True)
+        self._send_json({
+            "success": True,
+            "identifier": identifier,
+            "locked": locked,
+            "established": bool(data.get("Established", False)),
+            "desc": str(data.get("desc") or data.get("msg") or data.get("message") or ""),
+            "raw": data,
+        })
+
+    def _handle_icloud_info(self):
+        """Report iCloud-relevant device identifiers via ideviceinfo."""
+        from urllib.parse import urlparse, parse_qs
+
+        parsed = urlparse(self.path)
+        qs = parse_qs(parsed.query)
+        udid = (qs.get("serial", [""])[0] or "").strip()
+        if not udid:
+            self._send_json({"success": False, "error": "No device serial provided"})
+            return
+
+        info, err = _apple_info_fields(udid)
+        if err:
+            self._send_json({"success": False, "error": err})
+            return
+
+        keys = [
+            "DeviceName", "SerialNumber", "IMEI", "ICCID", "MEID", "PhoneNumber",
+            "ProductType", "HardwareModel", "ModelNumber", "ProductVersion", "BuildVersion",
+            "ActivationState", "ActivationStateAcknowledged", "WiFiAddress",
+            "BluetoothAddress", "DeviceClass", "MLBSerialNumber",
+        ]
+        report = {k: info.get(k, "") for k in keys}
+        report["MarketingName"] = _product_marketing_name(report.get("ProductType", ""))
+        self._send_json({"success": True, "device": report})
+
+    def _pm3_with_udid(self, sub, udid):
+        """Prefix a pymobiledevice3 subcommand with --udid placed after it."""
+        return [PYMOBILEDEVICE3] + sub + ["--udid", udid]
+
+    def _pm3_profile_identifiers(self, udid):
+        """Return installed profile identifiers matching com.apple.applicationaccess."""
+        proc, _ = _run_tool(self._pm3_with_udid(["profile", "list"], udid), 40)
+        if proc is None or proc.returncode != 0:
+            return []
+        try:
+            data = json.loads(proc.stdout or "{}")
+            meta = data.get("ProfileMetadata") or {}
+            return [k for k in meta if str(k).startswith("com.apple.applicationaccess")]
+        except Exception:
+            return []
+
+    def _handle_stop_update(self):
+        """Block/delay iOS OTA updates with a Restrictions profile (3uTools-style)."""
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body"})
+            return
+
+        action = (payload.get("action") or "").strip()
+        udid = (payload.get("serial") or "").strip()
+        if not PYMOBILEDEVICE3:
+            self._send_json({"success": False, "error":
+                "pymobiledevice3 not found. Install it in ~/pyvenv."})
+            return
+        if not action or not udid:
+            self._send_json({"success": False, "error": "Missing action or serial"})
+            return
+
+        if action == "status":
+            identifiers = self._pm3_profile_identifiers(udid)
+            self._send_json({
+                "success": True, "blocked": bool(identifiers),
+                "identifiers": identifiers,
+                "message": ("OTA updates are currently delayed by a Restrictions profile."
+                            if identifiers else "No update-blocking profile is installed."),
+            })
+            return
+
+        if action == "block":
+            try:
+                days = max(0, min(90, int(payload.get("days") or 90)))
+            except (TypeError, ValueError):
+                self._send_json({"success": False, "error": "Invalid days value"})
+                return
+            cmd = self._pm3_with_udid(
+                ["profile", "install-restrictions-profile",
+                 "--enforced-software-update-delay", str(days)], udid)
+            proc, err = _run_tool(cmd, 90)
+            if proc is None or proc.returncode != 0:
+                full_out = ""
+                if proc is not None:
+                    full_out = (proc.stdout or "") + (proc.stderr or "")
+                if "locked" in (full_out or "").lower():
+                    self._send_json({"success": False, "error":
+                        "iPhone is locked. Unlock it, then retry - the phone may prompt to allow the profile."})
+                    return
+                self._send_json({"success": False,
+                    "error": (full_out or err or "Failed to install update-blocking profile")[:600]})
+                return
+            identifiers = self._pm3_profile_identifiers(udid)
+            self._send_json({
+                "success": True, "blocked": bool(identifiers),
+                "identifiers": identifiers,
+                "message": ("Update-blocking profile installed - OTA updates are now delayed by "
+                            f"{days} day(s). Tap 'Allow' on the phone if it asks."),
+            })
+            return
+
+        if action == "unblock":
+            identifiers = self._pm3_profile_identifiers(udid)
+            if not identifiers:
+                self._send_json({"success": True, "blocked": False, "identifiers": [],
+                                 "message": "No update-blocking profile is installed."})
+                return
+            cmd = self._pm3_with_udid(["profile", "remove", identifiers[0]], udid)
+            proc, err = _run_tool(cmd, 40)
+            if proc is None or proc.returncode != 0:
+                full_out = ""
+                if proc is not None:
+                    full_out = (proc.stdout or "") + (proc.stderr or "")
+                self._send_json({"success": False,
+                    "error": (full_out or err or "Failed to remove profile")[:500]})
+                return
+            self._send_json({"success": True, "blocked": False, "identifiers": [],
+                             "message": "Update-blocking profile removed - OTA updates are re-enabled."})
+            return
+
+        self._send_json({"success": False, "error": f"Unknown action: {action}"})
+
+    def _handle_virtual_location(self):
+        """Simulate a GPS location through DVT (iOS 17+). The session must stay open."""
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body"})
+            return
+
+        action = (payload.get("action") or "").strip()
+        udid = (payload.get("serial") or "").strip()
+        if not PYMOBILEDEVICE3:
+            self._send_json({"success": False, "error":
+                "pymobiledevice3 not found. Install it in ~/pyvenv."})
+            return
+        if not udid:
+            self._send_json({"success": False, "error": "Missing serial"})
+            return
+
+        if action == "status":
+            self._send_json({
+                "success": True, "active": _virtual_location_alive(),
+                "lat": _VIRTUAL_LOCATION.get("lat"), "lng": _VIRTUAL_LOCATION.get("lng"),
+            })
+            return
+
+        if action == "set":
+            try:
+                lat = float(payload.get("lat"))
+                lng = float(payload.get("lng"))
+            except (TypeError, ValueError):
+                self._send_json({"success": False, "error": "Invalid latitude/longitude"})
+                return
+            _virtual_location_stop()
+            cmd = [PYMOBILEDEVICE3, "developer", "dvt", "simulate-location", "set",
+                   "--userspace", "--udid", udid, "--", str(lat), str(lng)]
+            log_file = APP_DIR / "data" / "vloc.log"
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            flags = 0
+            if platform.system() == "Windows":
+                flags = 0x00000200 | 0x08000000  # CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+                try:
+                    p = subprocess.Popen(
+                        cmd, stdout=open(log_file, "wb"), stderr=subprocess.STDOUT,
+                        stdin=subprocess.DEVNULL, creationflags=flags, close_fds=True)
+                except Exception as e:
+                    self._send_json({"success": False, "error": f"Failed to start: {e}"})
+                    return
+            else:
+                try:
+                    p = subprocess.Popen(
+                        cmd, stdout=open(log_file, "wb"), stderr=subprocess.STDOUT,
+                        stdin=subprocess.DEVNULL, start_new_session=True)
+                except Exception as e:
+                    self._send_json({"success": False, "error": f"Failed to start: {e}"})
+                    return
+            time.sleep(4)
+            if p.poll() is not None:
+                out = ""
+                try:
+                    out = log_file.read_text("utf-8", "replace")[:600]
+                except OSError:
+                    pass
+                self._send_json({"success": False, "error": (out or "Session exited unexpectedly")[:600]})
+                return
+            _VIRTUAL_LOCATION["pid"] = p.pid
+            _VIRTUAL_LOCATION["lat"] = lat
+            _VIRTUAL_LOCATION["lng"] = lng
+            self._send_json({
+                "success": True, "active": True, "lat": lat, "lng": lng,
+                "message": f"Simulated location set to {lat}, {lng}. It stays active while the session runs.",
+            })
+            return
+
+        if action == "clear":
+            _virtual_location_stop()
+            proc, err = _run_tool(self._pm3_with_udid(
+                ["developer", "dvt", "simulate-location", "clear", "--userspace"], udid), 40)
+            if proc is not None and proc.returncode != 0:
+                full_out = (proc.stdout or "") + (proc.stderr or "")
+                self._send_json({"success": True, "active": False,
+                    "message": "Session stopped. Clear reported: " + (full_out or err or "ok")[:300]})
+                return
+            self._send_json({"success": True, "active": False,
+                             "message": "Virtual location cleared - real GPS resumed."})
+            return
+
+        self._send_json({"success": False, "error": f"Unknown action: {action}"})
+
+    def _handle_mdm(self):
+        """Detect and remove Remote Management (MDM) enrollment on iOS and Android.
+
+        iOS: looks for MDM/management configuration profiles and removes them via
+        `pymobiledevice3 profile remove`. Supervised devices may reject removal.
+        Android: lists Device Owner / active admins and tries `dpm remove-active-admin`;
+        falls back to disabling the MDM app, or reports when a factory reset is the
+        only route.
+        """
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body"})
+            return
+
+        action = (payload.get("action") or "").strip()
+        device_type = (payload.get("deviceType") or "").strip().lower()
+        serial = (payload.get("serial") or "").strip()
+        identifier = (payload.get("identifier") or "").strip()
+
+        if not action or not device_type or not serial:
+            self._send_json({"success": False, "error": "Missing action, deviceType or serial"})
+            return
+
+        if device_type == "apple":
+            if not PYMOBILEDEVICE3:
+                self._send_json({"success": False, "error":
+                    "pymobiledevice3 not found. Install it in ~/pyvenv."})
+                return
+            if action == "status":
+                self._handle_mdm_ios_status(serial)
+            elif action == "remove" and identifier:
+                self._handle_mdm_ios_remove(serial, identifier)
+            else:
+                self._send_json({"success": False, "error": f"Unknown action: {action}"})
+            return
+
+        if device_type == "android":
+            adb = find_tool("adb")
+            if adb == "adb":
+                self._send_json({"success": False,
+                    "error": "Tool 'adb' not found. Install platform-tools."})
+                return
+            if action == "status":
+                self._handle_mdm_android_status(adb, serial)
+            elif action == "remove" and identifier:
+                self._handle_mdm_android_remove(adb, serial, identifier)
+            else:
+                self._send_json({"success": False, "error": f"Unknown action: {action}"})
+            return
+
+        self._send_json({"success": False, "error": f"Unsupported deviceType: {device_type}"})
+
+    def _handle_mdm_ios_status(self, udid):
+        entries = []
+        meta = {}
+        proc, err = _run_tool(self._pm3_with_udid(["profile", "list"], udid), 40)
+        if proc is None or proc.returncode != 0:
+            out = ""
+            if proc is not None:
+                out = ((proc.stdout or "") + (proc.stderr or ""))[:400]
+            self._send_json({"success": False,
+                "error": (out or err or "Could not list iOS profiles")[:400]})
+            return
+        try:
+            data = json.loads(proc.stdout or "{}")
+            meta = data.get("ProfileMetadata") or {}
+        except Exception:
+            meta = {}
+        for ident, m in meta.items():
+            if not _is_mdm_identifier(ident, _MDM_PROFILE_HINTS):
+                continue
+            if isinstance(m, dict):
+                name = m.get("ShortenedProfileName") or m.get("ProfileName") or ident
+            else:
+                name = ident
+            entries.append({"identifier": ident, "name": name, "kind": "mdm-profile"})
+        if entries:
+            message = (f"Found {len(entries)} Remote Management profile(s). "
+                       "Supervised devices may require the MDM removal passcode.")
+        else:
+            message = "No Remote Management (MDM) profiles detected."
+        self._send_json({"success": True, "platform": "apple", "enrolled": bool(entries),
+                         "entries": entries, "message": message})
+
+    def _handle_mdm_ios_remove(self, udid, identifier):
+        proc, err = _run_tool(self._pm3_with_udid(["profile", "remove", identifier], udid), 60)
+        full_out = ""
+        if proc is not None:
+            full_out = (proc.stdout or "") + (proc.stderr or "")
+        if proc is not None and proc.returncode == 0 and '"Status": "Error"' not in full_out:
+            if "not installed" in full_out.lower():
+                self._send_json({"success": True, "removed": False,
+                    "message": f"No matching profile '{identifier}' is installed - nothing to remove."})
+                return
+            self._send_json({"success": True, "removed": True,
+                "message": f"Removed Remote Management profile '{identifier}'."})
+            return
+        if "locked" in full_out.lower():
+            self._send_json({"success": False, "removed": False,
+                "error": "iPhone is locked. Unlock it, then retry."})
+            return
+        self._send_json({"success": False, "removed": False,
+            "error": (full_out or err or "Profile removal failed")[:500]})
+
+    def _handle_mdm_android_status(self, adb, serial):
+        def sh(args, timeout=20):
+            try:
+                r = subprocess.run(
+                    [adb, "-s", serial, "shell"] + args,
+                    capture_output=True, text=True, encoding="utf-8", errors="replace",
+                    timeout=timeout,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                )
+                return r.returncode, (r.stdout or "") + (r.stderr or "")
+            except subprocess.TimeoutExpired:
+                return 1, "Timed out"
+            except Exception as e:
+                return 1, str(e)
+
+        entries = []
+        seen = set()
+
+        rc, out = sh(["dpm", "list-owners"])
+        for line in out.splitlines():
+            if line.startswith("Package:"):
+                pkg = line.split("Package:", 1)[1].strip()
+                if pkg and pkg not in seen:
+                    seen.add(pkg)
+                    entries.append({"identifier": pkg, "name": pkg, "kind": "device-owner"})
+
+        rc, out = sh(["dumpsys", "device_policy"])
+        for m in re.finditer(r"admin=ComponentInfo\{([^}]+)\}", out):
+            comp = m.group(1)
+            pkg = comp.split("/", 1)[0]
+            if pkg in seen:
+                continue
+            if _is_mdm_identifier(pkg, _MDM_PKG_HINTS):
+                seen.add(pkg)
+                entries.append({"identifier": comp, "name": comp, "kind": "active-admin"})
+
+        rc, out = sh(["pm", "list", "packages"])
+        for p in re.findall(r"package:([\w.]+)", out):
+            if p in seen:
+                continue
+            if _is_mdm_identifier(p, _MDM_PKG_HINTS):
+                seen.add(p)
+                entries.append({"identifier": p, "name": p, "kind": "mdm-app"})
+
+        if entries:
+            message = (f"Found {len(entries)} Remote Management entr"
+                       f"y/entries detected on this Android device.")
+        else:
+            message = "No Remote Management (MDM) enrollment detected."
+        self._send_json({"success": True, "platform": "android", "enrolled": bool(entries),
+                         "entries": entries, "message": message})
+
+    def _handle_mdm_android_remove(self, adb, serial, identifier):
+        pkg = identifier.split("/", 1)[0]
+
+        def sh(args, timeout=25):
+            try:
+                r = subprocess.run(
+                    [adb, "-s", serial, "shell"] + args,
+                    capture_output=True, text=True, encoding="utf-8", errors="replace",
+                    timeout=timeout,
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                )
+                return r.returncode, (r.stdout or "") + (r.stderr or "")
+            except subprocess.TimeoutExpired:
+                return 1, "Timed out"
+            except Exception as e:
+                return 1, str(e)
+
+        rc, out = sh(["dpm", "remove-active-admin", "-n", identifier])
+        low = out.lower()
+        if rc == 0 and ("error" not in low) and ("cannot" not in low) and ("not permitted" not in low):
+            self._send_json({"success": True, "removed": True,
+                "message": f"Removed active admin '{identifier}'.", "output": out[:300]})
+            return
+
+        rc2, out2 = sh(["pm", "disable-user", "--user", "0", pkg])
+        low2 = out2.lower()
+        if rc2 == 0 and "error" not in low2 and "cannot" not in low2:
+            self._send_json({"success": True, "removed": True,
+                "message": f"Active admin could not be removed, but the MDM app '{pkg}' "
+                           "was disabled for user 0 - it can no longer enforce policies.",
+                "output": out2[:300]})
+            return
+
+        detail = (out or out2 or "").strip()[:400]
+        self._send_json({"success": False, "removed": False,
+            "error": (f"Could not remove '{identifier}'. "
+                      f"Device owners typically require a factory reset or the MDM administrator. "
+                      + (detail if detail else ""))[:600]})
+
     def _get_adb_props(self, serial):
         """Get ADB device properties"""
         props = {}
@@ -1381,6 +2803,122 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         if "/api/" in str(args[0]) if args else False:
             super().log_message(format, *args)
 
+    def _handle_tool_run(self):
+        """Run a detected tool against the selected device and return its output."""
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            self._send_json({"success": False, "error": "Invalid request body", "output": "", "command": ""})
+            return
+
+        name = (payload.get("name") or "").strip()
+        if not name:
+            self._send_json({"success": False, "error": "No tool name provided", "output": "", "command": ""})
+            return
+
+        tool = next((t for cat in _TOOL_DEFS.values() for t in cat if t[0] == name), None)
+        if not tool:
+            self._send_json({"success": False, "error": f"Unknown tool: {name}", "output": "", "command": ""})
+            return
+
+        path = find_tool(name)
+        if path == name:
+            self._send_json({"success": False, "error": f"Tool not found: {name}", "output": "", "command": ""})
+            return
+
+        _, _, _, action, runnable = tool
+        if not runnable:
+            self._send_json({"success": False, "error": f"{name} is informational only", "output": "", "command": ""})
+            return
+
+        mode = (payload.get("mode") or "").lower()
+        serial = (payload.get("serial") or "").strip() or None
+
+        udid = None
+        if mode in ("apple", "ios") or name.startswith("idevice"):
+            udid = (payload.get("udid") or "").strip() or self._get_apple_udid()
+
+        out_dir = _tool_output_dir()
+        dest = out_dir / f"{name}-{int(time.time() * 1000)}.png" if action == "screenshot" else out_dir
+
+        try:
+            cmd = _TOOL_ACTIONS[action](path, udid, dest)
+        except KeyError:
+            self._send_json({"success": False, "error": f"No run action for tool: {name}", "output": "", "command": ""})
+            return
+
+        timeout = 300 if action in ("backup", "screenshot", "crash") else 60
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=timeout,
+                encoding="utf-8", errors="replace",
+                creationflags=0x08000000 if platform.system() == "Windows" else 0,
+            )
+        except subprocess.TimeoutExpired:
+            self._send_json({"success": False, "error": f"Timed out after {timeout}s", "output": "", "command": " ".join(cmd)})
+            return
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e), "output": "", "command": " ".join(cmd)})
+            return
+
+        out = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
+        artifact = None
+        if action == "screenshot" and dest.exists():
+            artifact = f"data/tools/{dest.name}"
+
+        self._send_json({
+            "success": result.returncode == 0,
+            "error": "" if result.returncode == 0 else "Tool exited with an error",
+            "output": out,
+            "command": " ".join(cmd),
+            "artifact": artifact,
+        })
+
+    def _handle_partitions(self):
+        """Return the connected device's partition table."""
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            self._send_json({"partitions": [], "error": "Invalid request body"})
+            return
+
+        serial = (payload.get("serial") or "").strip() or None
+        mode = (payload.get("mode") or "").lower()
+        device_type = (payload.get("deviceType") or "").lower()
+
+        if device_type == "apple" or mode in ("apple", "ios"):
+            self._send_json({
+                "partitions": [],
+                "error": ("iPhone/iPad volumes are not enumerable over USB without a jailbreak "
+                          "or the Developer disk image; iOS uses APFS. Partition access requires "
+                          "recovery/DFU mode tooling or a jailbroken device."),
+            })
+            return
+
+        if mode in ("fastboot", "edl", "download", "preloader"):
+            parts = _fastboot_partitions(serial or "")
+            if parts:
+                self._send_json({"partitions": parts, "error": ""})
+                return
+            self._send_json({
+                "partitions": [],
+                "error": "No partition info returned by fastboot. Ensure the device is in fastboot mode.",
+            })
+            return
+
+        if mode in ("adb", "normal", "recovery") or device_type == "android":
+            parts = _adb_partitions(serial or "")
+            if parts:
+                self._send_json({"partitions": parts, "error": ""})
+                return
+            self._send_json({
+                "partitions": [],
+                "error": "No partitions readable via ADB. Ensure USB debugging is enabled and authorized.",
+            })
+            return
+
+        self._send_json({"partitions": [], "error": "Unsupported device mode for partition listing."})
+
 
 def _disable_usb_selective_suspend():
     """Disable Windows USB selective suspend to keep devices connected"""
@@ -1426,6 +2964,127 @@ def _disable_device_power_management(device_id):
         )
     except Exception:
         pass
+
+
+def _partition_type(name):
+    """Infer a partition type from its node name."""
+    n = name.lower()
+    if "boot" in n:
+        return "boot"
+    if "recovery" in n:
+        return "recovery"
+    if "system" in n:
+        return "system"
+    if "vendor" in n:
+        return "vendor"
+    if "userdata" in n or n == "data":
+        return "userdata"
+    if "cache" in n:
+        return "cache"
+    if "misc" in n:
+        return "misc"
+    if "efs" in n:
+        return "misc"
+    return "unknown"
+
+
+def _parse_size(text):
+    """Convert a size string like '16M', '4G', '512K' or hex (0x...) to bytes."""
+    try:
+        t = text.strip()
+        if not t:
+            return 0
+        if t.lower().startswith("0x"):
+            return int(t, 16)
+        m = re.fullmatch(r"(\d+)\s*([KMGTP]?)", t.upper())
+        if not m:
+            return 0
+        val = int(m.group(1))
+        unit = m.group(2)
+        return val * {"": 1, "K": 1024, "M": 1024 ** 2, "G": 1024 ** 3, "T": 1024 ** 4}[unit]
+    except Exception:
+        return 0
+
+
+def _adb_partitions(serial):
+    """Enumerate Android partitions over ADB via /proc/partitions + by-name map."""
+    adb = find_tool("adb")
+    name_map = {}
+    for bydir in ("/dev/block/bootdevice/by-name", "/dev/block/by-name"):
+        try:
+            r = subprocess.run(
+                [adb, "-s", serial, "shell", "ls", "-l", bydir],
+                capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
+                creationflags=0x08000000 if platform.system() == "Windows" else 0,
+            )
+            if r.returncode == 0:
+                for line in r.stdout.splitlines():
+                    m = re.search(r"([\w.-]+)\s*->\s*[/\w./]*/(\w+)$", line)
+                    if m:
+                        name_map[m.group(2)] = m.group(1)
+                if name_map:
+                    break
+        except Exception:
+            pass
+
+    try:
+        r = subprocess.run(
+            [adb, "-s", serial, "shell", "cat", "/proc/partitions"],
+            capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
+            creationflags=0x08000000 if platform.system() == "Windows" else 0,
+        )
+    except Exception:
+        return []
+
+    parts = []
+    for line in r.stdout.splitlines():
+        f = line.split()
+        if len(f) != 4 or not f[2].isdigit():
+            continue
+        node = f[3]
+        if node.startswith(("loop", "ram", "zram", "dm-")) or not re.search(r"[a-z]+\d+$", node):
+            continue
+        size = int(f[2]) * 1024
+        name = name_map.get(node, node)
+        parts.append({
+            "id": node,
+            "name": name,
+            "size": size,
+            "type": _partition_type(name),
+            "status": "empty",
+            "node": node,
+        })
+    parts.sort(key=lambda p: p["name"])
+    return parts
+
+
+def _fastboot_partitions(serial):
+    """Enumerate partitions over fastboot via 'getvar all'."""
+    fastboot = find_tool("fastboot")
+    try:
+        cmd = [fastboot, "-s", serial, "getvar", "all"] if serial else [fastboot, "getvar", "all"]
+        r = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=15, encoding="utf-8", errors="replace",
+            creationflags=0x08000000 if platform.system() == "Windows" else 0,
+        )
+    except Exception:
+        return []
+    parts = []
+    for line in r.stdout.splitlines():
+        m = re.search(r"partition-size:\s*([\w-]+):\s*(\S+)", line)
+        if not m:
+            continue
+        name = m.group(1)
+        parts.append({
+            "id": name,
+            "name": name,
+            "size": _parse_size(m.group(2)),
+            "type": _partition_type(name),
+            "status": "empty",
+            "node": name,
+        })
+    parts.sort(key=lambda p: p["name"])
+    return parts
 
 
 class DevicePoller:
@@ -1547,9 +3206,15 @@ class DevicePoller:
         product_id = "0000"
         for entry in usb_entries:
             did = entry.get("id", "")
-            if "PID_" in did.upper():
+            upper = did.upper()
+            if "PID_" in upper:
                 product_id = did.split("PID_")[1][:4].upper()
-            if "MI_" not in did and "ROOT_HUB" not in did:
+            elif "05AC:" in upper:
+                # Linux lsusb format: "Bus 003 Device 016: ID 05ac:12a8 Apple ..."
+                m = re.search(r"ID\s+05ac:([0-9a-fA-F]{4})", did)
+                if m:
+                    product_id = m.group(1).upper()
+            if "MI_" not in did and "ROOT_HUB" not in did and "\\" in did:
                 parts = did.split("\\")
                 if len(parts) >= 3 and parts[2]:
                     serial_from_usb = parts[2]
@@ -1754,6 +3419,15 @@ class DevicePoller:
     def _get_usb_apple_entries(self):
         """Return raw USB PnP entries for Apple (VID_05AC)"""
         try:
+            if platform.system() == "Linux":
+                r = subprocess.run(
+                    ["lsusb", "-d", "05ac:"], capture_output=True, text=True, timeout=5
+                )
+                entries = []
+                for line in r.stdout.strip().split("\n"):
+                    if line:
+                        entries.append({"name": line, "id": line})
+                return entries
             r = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
                  "Get-CimInstance Win32_PnPEntity | "

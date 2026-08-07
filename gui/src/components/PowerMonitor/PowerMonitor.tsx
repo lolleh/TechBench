@@ -244,7 +244,7 @@ export function PowerMonitor() {
               </div>
             ) : (
               <div className="bg-surface-2/30 rounded-xl p-3 border border-white/5 text-xs text-white/30">
-                Click "Analyze" to match against known boot signatures
+                Click &quot;Analyze&quot; to match against known boot signatures
               </div>
             )}
           </div>

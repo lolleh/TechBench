@@ -220,7 +220,7 @@ export interface SavedCommand {
   id: string
   name: string
   command: string
-  category: 'adb' | 'fastboot' | 'shell' | 'custom'
+  category: 'adb' | 'fastboot' | 'apple' | 'shell' | 'custom'
   description?: string
   lastRun?: Date
   runCount: number

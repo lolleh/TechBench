@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Partition } from '../../lib/types'
+import { useDeviceStore } from '../../lib/deviceStore'
+import { tauri } from '../../lib/tauri'
 
 const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   boot: { bg: 'bg-neon-green/10', text: 'text-neon-green', border: 'border-neon-green/20' },
@@ -27,7 +29,33 @@ function formatSize(bytes: number): string {
 
 export function PartitionManager() {
   const [selectedPartition, setSelectedPartition] = useState<Partition | null>(null)
-  const [partitions] = useState<Partition[]>([])
+  const [partitions, setPartitions] = useState<Partition[]>([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const devices = useDeviceStore((s) => s.devices)
+  const selectedDeviceId = useDeviceStore((s) => s.selectedDeviceId)
+  const selectedDevice = devices.find((d) => d.id === selectedDeviceId) ?? null
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (!selectedDevice) {
+        setPartitions([])
+        setError('No device selected. Pick a device in the Device Manager first.')
+        return
+      }
+      setLoading(true)
+      setError('')
+      const mode = selectedDevice.deviceType === 'apple' ? 'apple' : selectedDevice.bootMode
+      const result = await tauri.fetchPartitions(selectedDevice.serial, mode, selectedDevice.deviceType)
+      if (cancelled) return
+      setPartitions(result.partitions)
+      setError(result.error)
+      setLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [selectedDevice])
 
   const totalSize = partitions.reduce((sum, p) => sum + p.size, 0)
   const dumpedCount = partitions.filter((p) => p.status === 'dumped').length
@@ -48,8 +76,10 @@ export function PartitionManager() {
                 <path d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
               </svg>
             </div>
-            <p className="text-sm text-white/40 mb-1">No partitions detected</p>
-            <p className="text-xs text-white/20">Connect a device to view partitions</p>
+            <p className="text-sm text-white/40 mb-1">
+              {loading ? 'Reading partitions...' : error ? 'No partitions detected' : 'No device selected'}
+            </p>
+            <p className="text-xs text-white/20 px-6">{error || 'Connect a device to view partitions'}</p>
           </div>
         ) : (
           <>

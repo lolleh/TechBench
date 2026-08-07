@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDeviceStore } from '../../lib/deviceStore'
+import { tauri } from '../../lib/tauri'
 import type { DeviceHealth } from '../../lib/types'
 
 const HEALTH_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -19,6 +20,7 @@ export function DeviceHealthCheck() {
   const devices = useDeviceStore((s) => s.devices)
   const [isScanning, setIsScanning] = useState(false)
   const [health, setHealth] = useState<DeviceHealth | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const selectedDevice = devices.find((d) => d.status === 'connected') || null
 
@@ -30,26 +32,23 @@ export function DeviceHealthCheck() {
     : health?.batteryLevel && health.batteryLevel > 20 ? 'text-neon-yellow'
     : 'text-red-400'
 
-  const handleScan = () => {
+  const handleScan = async () => {
+    if (!selectedDevice || !selectedDevice.serial) return
     setIsScanning(true)
-    setTimeout(() => {
-      setIsScanning(false)
-      if (selectedDevice) {
-        setHealth({
-          batteryHealth: 'unknown',
-          batteryLevel: null,
-          batteryCycles: null,
-          storageUsed: null,
-          storageTotal: null,
-          imei: null,
-          androidVersion: null,
-          securityPatch: null,
-          screenLock: null,
-          bootloaderUnlocked: null,
-          rootStatus: 'unknown',
-        })
+    setHealth(null)
+    setError(null)
+    try {
+      const result = await tauri.fetchDeviceHealth(selectedDevice.serial, selectedDevice.deviceType)
+      if (result.success && result.health) {
+        setHealth(result.health)
+      } else {
+        setError(result.error || 'Health scan failed')
       }
-    }, 2000)
+    } catch (err) {
+      setError(`Health scan error: ${err}`)
+    } finally {
+      setIsScanning(false)
+    }
   }
 
   return (
@@ -79,13 +78,18 @@ export function DeviceHealthCheck() {
           </div>
         ) : !health ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4 max-w-[90%]">
+                <p className="text-xs text-red-400">Scan failed: {error}</p>
+              </div>
+            )}
             <div className="w-16 h-16 rounded-2xl bg-surface-3/50 flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-white/15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
               </svg>
             </div>
             <p className="text-sm text-white/40 mb-1">Device detected: {selectedDevice.productName}</p>
-            <p className="text-xs text-white/20">Click "Scan" to check health status</p>
+            <p className="text-xs text-white/20">Click &quot;Scan&quot; to check health status</p>
           </div>
         ) : (
           <div className="space-y-3 animate-fade-in">
@@ -147,7 +151,7 @@ export function DeviceHealthCheck() {
                   <span className="text-xs font-mono text-white/70">{health.imei || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/50">Android</span>
+                  <span className="text-xs text-white/50">OS Version</span>
                   <span className="text-xs text-white/70">{health.androidVersion || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -204,7 +208,7 @@ export function DeviceHealthCheck() {
               </svg>
             </div>
             <p className="text-sm text-white/40 mb-1">Scan required</p>
-            <p className="text-xs text-white/20">Click "Scan" to analyze device health</p>
+            <p className="text-xs text-white/20">Click &quot;Scan&quot; to analyze device health</p>
           </div>
         ) : (
           <div className="space-y-3 animate-fade-in">
@@ -217,9 +221,39 @@ export function DeviceHealthCheck() {
                 </div>
                 <span className="text-sm font-medium text-white/80">Device: {selectedDevice.productName}</span>
               </div>
-              <p className="text-xs text-white/40">
-                Health scan completed. All systems operational.
-              </p>
+              <div className="space-y-1.5">
+                {health.batteryHealth === 'poor' && (
+                  <p className="text-xs text-red-400">Battery health is degraded - consider replacement.</p>
+                )}
+                {health.batteryHealth === 'fair' && (
+                  <p className="text-xs text-neon-yellow">Battery health is fair - monitor it.</p>
+                )}
+                {health.batteryLevel !== null && health.batteryLevel <= 20 && (
+                  <p className="text-xs text-neon-yellow">Battery level is low ({health.batteryLevel}%) - charge the device.</p>
+                )}
+                {health.batteryCycles !== null && (
+                  <p className="text-xs text-white/40">{health.batteryCycles} charge cycles recorded.</p>
+                )}
+                {health.storageUsed !== null && health.storageTotal !== null && storagePercent > 90 && (
+                  <p className="text-xs text-neon-orange">Storage is {storagePercent}% full - free up space.</p>
+                )}
+                {!health.imei && health.rootStatus !== 'unknown' && (
+                  <p className="text-xs text-white/40">No IMEI reported.</p>
+                )}
+                {health.screenLock === false && (
+                  <p className="text-xs text-neon-orange">Screen lock is disabled - security risk.</p>
+                )}
+                {health.bootloaderUnlocked && (
+                  <p className="text-xs text-neon-orange">Bootloader is unlocked.</p>
+                )}
+                {health.rootStatus === 'rooted' && (
+                  <p className="text-xs text-neon-orange">Device is rooted.</p>
+                )}
+                {health.batteryHealth === 'good' && health.batteryLevel === null
+                  && health.storageUsed === null && health.imei && (
+                  <p className="text-xs text-white/40">Health scan completed. All systems operational.</p>
+                )}
+              </div>
             </div>
           </div>
         )}
