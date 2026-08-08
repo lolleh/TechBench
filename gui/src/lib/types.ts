@@ -1,4 +1,4 @@
-export type DeviceType = 'android' | 'apple' | 'qualcomm' | 'mediatek' | 'samsung' | 'xiaomi' | 'lenovo' | 'oppo' | 'vivo' | 'motorola' | 'huawei' | 'tecno' | 'zte' | 'generic' | 'unknown'
+export type DeviceType = 'android' | 'apple' | 'qualcomm' | 'mediatek' | 'samsung' | 'xiaomi' | 'lenovo' | 'oppo' | 'vivo' | 'motorola' | 'huawei' | 'tecno' | 'zte' | 'modem' | 'mifi' | 'generic' | 'unknown'
 export type BootMode = 'normal' | 'fastboot' | 'edl' | 'recovery' | 'dfu' | 'download' | 'preloader' | 'unknown'
 export type DeviceStatus = 'connected' | 'disconnected' | 'error' | 'busy'
 
@@ -30,6 +30,44 @@ export interface DeviceCapabilities {
   canIsp: boolean
   canJtag: boolean
   supportedProtocols: string[]
+}
+
+export interface Modem {
+  id: string
+  serial: string
+  state: string
+  mode: string
+  interface: string
+  vendorId: string
+  productId: string
+  vendorName: string
+  productName: string
+  deviceType: 'modem' | 'mifi'
+  chipset: string
+  bootMode: string
+  port?: string
+  index?: number
+  ports?: string[]
+  imei?: string
+  iccid?: string
+  firmware?: string
+  operator?: string
+  signalQuality?: string | null
+  accessTechnology?: string
+  registration?: string
+  lockState?: string
+  powerState?: string
+  apn?: string
+  ipAddress?: string
+  adminUrl?: string
+  host?: string
+}
+
+export interface ModemInfo {
+  index: number
+  brand: string
+  model: string
+  info: Record<string, string>
 }
 
 export interface SignalChannel {

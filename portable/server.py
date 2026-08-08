@@ -16,6 +16,7 @@ import tempfile
 import webbrowser
 import shutil
 import threading
+import urllib.request
 from http.server import HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Timer
@@ -447,6 +448,12 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         elif self.path == "/api/devices":
             devices = _poller.get_devices() if _poller else self._list_adb_devices()
             self._send_json(devices)
+        # API: List detected modems / MiFi devices
+        elif self.path == "/api/modems":
+            self._send_json(_poller.get_modems() if _poller else [])
+        # API: Detailed modem info (fresh ModemManager read)
+        elif self.path.startswith("/api/modems/info"):
+            self._send_json(self._modem_info_all())
         # API: List installed iOS apps
         elif self.path == "/api/ios/apps":
             self._send_json(self._list_ios_apps())
@@ -513,6 +520,8 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._handle_virtual_location()
         elif self.path.startswith("/api/mdm"):
             self._handle_mdm()
+        elif self.path.startswith("/api/modems/at"):
+            self._handle_modem_at()
         elif self.path.startswith("/api/update"):
             self._handle_update()
         else:
@@ -884,6 +893,68 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
 
         apps.sort(key=lambda a: (a["isSystem"], a["appName"].lower()))
         return {"available": True, "apps": apps, "error": ""}
+
+    def _modem_info_all(self):
+        """Return detailed info for all ModemManager modems (Linux)."""
+        if platform.system() != "Linux":
+            return {"available": False, "message": "ModemManager is only supported on Linux", "modems": []}
+        if not shutil.which("mmcli"):
+            return {"available": False, "message": "mmcli / ModemManager not installed", "modems": []}
+        modems = []
+        for idx, brand, model in _mmcli_list():
+            info = _mmcli_modem_info(idx)
+            modems.append({
+                "index": idx,
+                "brand": brand,
+                "model": model,
+                "info": info or {},
+            })
+        return {"available": True, "message": "", "modems": modems}
+
+    def _handle_modem_at(self):
+        """Send an AT command to a modem via a serial port or ModemManager."""
+        payload = {}
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            pass
+        command = (payload.get("command") or "").strip()
+        port = (payload.get("port") or "").strip()
+        index = payload.get("index")
+        if not command:
+            self._send_json({"success": False, "message": "command is required"})
+            return
+        # Prefer ModemManager command mode when an index is supplied.
+        if index is not None:
+            mmcli = shutil.which("mmcli")
+            if not mmcli:
+                self._send_json({"success": False, "message": "mmcli not installed"})
+                return
+            try:
+                r = subprocess.run(
+                    [mmcli, "-m", str(index), "--command", command],
+                    capture_output=True, text=True, timeout=15,
+                    encoding="utf-8", errors="replace",
+                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
+                )
+                out = ((r.stdout or "") + "\n" + (r.stderr or "")).strip()
+                m = re.search(r"response:\s*(.*)", out, re.I | re.S)
+                response = m.group(1).strip() if m else out
+                self._send_json({"success": r.returncode == 0, "port": port, "index": index,
+                                 "command": command, "response": response})
+                return
+            except Exception as e:
+                self._send_json({"success": False, "message": f"mmcli failed: {e}"})
+                return
+        if not port:
+            self._send_json({"success": False,
+                             "message": "port is required (or supply index for ModemManager)"})
+            return
+        response = _at_single_query(port, command)
+        if response is None:
+            self._send_json({"success": False, "message": f"Could not open serial port {port}"})
+            return
+        self._send_json({"success": True, "port": port, "command": command, "response": response})
 
     def _read_body(self):
         """Read the raw request body"""
@@ -3261,6 +3332,261 @@ def _fastboot_partitions(serial):
     return parts
 
 
+# ---------------------------------------------------------------------------
+# Modem / MiFi / USB-dongle detection helpers
+# ---------------------------------------------------------------------------
+
+# Small curated map of common cellular-modem USB vendor IDs -> vendor name.
+# Used as a fallback when ModemManager / AT probing are unavailable.
+_MODEM_VID_BRAND = {
+    "05C6": "Qualcomm",
+    "1415": "Qualcomm",
+    "12D1": "Huawei",
+    "19D2": "ZTE",
+    "2C7C": "Quectel",
+    "1E0E": "SIMCom",
+    "1BC7": "Telit",
+    "2CB7": "Fibocom",
+    "1546": "u-blox",
+    "1199": "Sierra Wireless",
+    "1410": "Novatel",
+    "0C1B": "Option",
+    "1004": "LG Electronics",
+    "0421": "Nokia",
+    "0B3C": "Telecom Italia",
+    "1BBB": "Alcatel / TP-Link",
+    "07D1": "D-Link",
+    "02FF": "Netgear",
+    "1782": "Spreadtrum",
+    "0E8D": "MediaTek",
+}
+
+_MODEM_CHIPSET_BY_VID = {
+    "05C6": "Qualcomm",
+    "1415": "Qualcomm",
+    "12D1": "HiSilicon",
+    "19D2": "Qualcomm",
+    "2C7C": "Qualcomm",
+    "1E0E": "Spreadtrum",
+    "1782": "Spreadtrum",
+    "0E8D": "MediaTek",
+    "1BC7": "Telit",
+    "2CB7": "Fibocom",
+    "1546": "u-blox",
+    "1199": "Qualcomm",
+}
+
+# Well-known MiFi hotspot admin hosts (Huawei/ZTE dongles default to 192.168.8.1).
+_MIFI_ADMIN_HOSTS = ("192.168.8.1", "192.168.1.1", "192.168.0.1", "192.168.100.1")
+
+# Page-title hints that suggest an admin host is a cellular MiFi / dongle.
+_MIFI_TITLE_HINTS = ("mifi", "lte", "4g", "5g", "mobile broadband",
+                     "mobile wifi", "huawei", "zte", "quectel", "gigacube",
+                     "netgear", "gl.inet", "gl-inet", "cell")
+
+# AT commands used to identify a serial cellular modem.
+_AT_IDENTITY_COMMANDS = ("AT", "ATI", "AT+CGMI", "AT+CGMM", "AT+CGSN", "AT+ICCID", "AT+CSQ")
+
+
+def _try_serial():
+    """Return the pyserial module if importable, else None."""
+    try:
+        import serial
+        return serial
+    except Exception:
+        return None
+
+
+def _list_modem_serial_ports():
+    """Return serial ports that may host a cellular modem AT interface."""
+    if platform.system() == "Windows":
+        serial = _try_serial()
+        if serial is not None:
+            try:
+                from serial.tools import list_ports
+                return sorted(p.device for p in list_ports.comports())
+            except Exception:
+                pass
+        return []
+    import glob
+    return sorted(glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*"))
+
+
+def _at_exchange(ser, cmd, timeout=1.5):
+    """Send a single AT command and read until OK/ERROR/timeout."""
+    try:
+        ser.reset_input_buffer()
+    except Exception:
+        pass
+    try:
+        ser.write((cmd + "\r").encode("latin-1", "replace"))
+        ser.flush()
+    except Exception:
+        return None
+    data = b""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            waiting = ser.in_waiting
+        except Exception:
+            waiting = 0
+        if waiting:
+            chunk = ser.read(waiting)
+            if chunk:
+                data += chunk
+                if b"OK" in data or b"ERROR" in data:
+                    break
+        else:
+            if b"OK" in data or b"ERROR" in data:
+                break
+            time.sleep(0.05)
+    return data.decode("latin-1", "replace")
+
+
+def _at_probe_port(port, commands=_AT_IDENTITY_COMMANDS, timeout=1.5):
+    """Probe a serial port with AT commands. Returns dict or None."""
+    serial = _try_serial()
+    if serial is None:
+        return None
+    try:
+        ser = serial.Serial(port, baudrate=115200, timeout=timeout, write_timeout=timeout)
+    except Exception:
+        return None
+    try:
+        time.sleep(0.2)
+        info = {}
+        for cmd in commands:
+            resp = _at_exchange(ser, cmd, timeout)
+            if resp is None:
+                continue
+            if cmd == "AT":
+                if "OK" not in resp.upper():
+                    return None
+            info[cmd] = resp
+        return info
+    except Exception:
+        return None
+    finally:
+        try:
+            ser.close()
+        except Exception:
+            pass
+
+
+def _at_single_query(port, command, timeout=2.0):
+    """Open a port, send one AT command, return raw response (or None)."""
+    serial = _try_serial()
+    if serial is None:
+        return None
+    try:
+        ser = serial.Serial(port, baudrate=115200, timeout=timeout, write_timeout=timeout)
+    except Exception:
+        return None
+    try:
+        time.sleep(0.1)
+        return _at_exchange(ser, command, timeout)
+    except Exception:
+        return None
+    finally:
+        try:
+            ser.close()
+        except Exception:
+            pass
+
+
+def _first_at_line(raw, default=""):
+    """First meaningful line from an AT response (skips echo + OK/ERROR)."""
+    if not raw:
+        return default
+    for line in raw.splitlines():
+        line = line.strip().replace("\r", "")
+        if not line:
+            continue
+        up = line.upper()
+        if up in ("OK", "ERROR") or up.startswith("+CME ERROR") or up.startswith("+CMS ERROR"):
+            continue
+        if up.startswith("AT"):
+            continue
+        return line
+    return default
+
+
+def _parse_mmcli(text):
+    """Parse `mmcli -m N` output into a flat dict keyed by '<section>.<key>'."""
+    result = {}
+    section = None
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if not line or "|" not in line:
+            continue
+        left, _, right = line.partition("|")
+        key = left.strip()
+        val = right.strip()
+        if key:
+            section = key.lower().replace(" ", "_")
+            m = re.match(r"path:\s*(.+)", val)
+            if m:
+                result["path"] = m.group(1).strip()
+            else:
+                # The first row of a section also carries a value,
+                # e.g. "Status | state: registered".
+                m = re.match(r"([^:]+):\s*(.*)", val)
+                if m:
+                    k = m.group(1).strip().lower().replace(" ", "_")
+                    result[f"{section}.{k}"] = m.group(2).strip()
+            continue
+        if not val or not section:
+            continue
+        m = re.match(r"([^:]+):\s*(.*)", val)
+        if m:
+            k = m.group(1).strip().lower().replace(" ", "_")
+            result[f"{section}.{k}"] = m.group(2).strip()
+    return result
+
+
+def _mmcli_list():
+    """Return list of (index, brand, model) tuples from `mmcli -L`."""
+    mmcli = shutil.which("mmcli")
+    if not mmcli:
+        return []
+    try:
+        r = subprocess.run([mmcli, "-L"], capture_output=True, text=True, timeout=5,
+                           encoding="utf-8", errors="replace",
+                           creationflags=0x08000000 if platform.system() == "Windows" else 0)
+        if r.returncode != 0:
+            return []
+        found = []
+        for line in r.stdout.splitlines():
+            m = re.search(r"/org/freedesktop/ModemManager1/Modem/(\d+)", line)
+            if m:
+                idx = int(m.group(1))
+                brand = model = ""
+                m2 = re.search(r"\[([^\]]*)\]\s*(.*)", line)
+                if m2:
+                    brand = m2.group(1).strip()
+                    model = m2.group(2).strip()
+                found.append((idx, brand, model))
+        return found
+    except Exception:
+        return []
+
+
+def _mmcli_modem_info(idx):
+    """Return parsed `mmcli -m <idx>` info dict, or None on failure."""
+    mmcli = shutil.which("mmcli")
+    if not mmcli:
+        return None
+    try:
+        r = subprocess.run([mmcli, "-m", str(idx)], capture_output=True, text=True,
+                           timeout=10, encoding="utf-8", errors="replace",
+                           creationflags=0x08000000 if platform.system() == "Windows" else 0)
+        if r.returncode != 0:
+            return None
+        return _parse_mmcli(r.stdout)
+    except Exception:
+        return None
+
+
 class DevicePoller:
     """Background thread that polls for devices and caches their state.
 
@@ -3279,6 +3605,10 @@ class DevicePoller:
         self._apple_cache = {}          # udid -> {productName, chipset, last_seen, boot_mode}
         self._devices = []              # last polled device list
         self._timestamp = 0.0
+        # Modem / MiFi cache
+        self._modem_seen = {}           # cache_key -> {"entry": dict, "probed_at": float}
+        self._modem_probe_interval = 60.0
+        self._last_mifi_probe = 0.0
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -3354,6 +3684,9 @@ class DevicePoller:
 
         # --- USB special modes (EDL, preloader, download, etc.) ---
         devices.extend(self._poll_usb_special())
+
+        # --- Modems / MiFi / USB dongles ---
+        devices.extend(self._poll_modems())
 
         with self._lock:
             self._devices = devices
@@ -3568,9 +3901,346 @@ class DevicePoller:
         return results
 
     # ------------------------------------------------------------------
+    def get_modems(self):
+        """Return the cached list of modem / MiFi entries."""
+        with self._lock:
+            return [d for d in self._devices if d.get("deviceType") in ("modem", "mifi")]
+
+    # ------------------------------------------------------------------
+    def _poll_modems(self):
+        """Detect cellular modems, MiFi hotspots and USB dongles."""
+        results = []
+        now = time.time()
+        claimed_ports = set()
+
+        if platform.system() == "Linux":
+            mm = self._poll_modems_mmcli()
+            results.extend(mm["modems"])
+            claimed_ports = mm["claimed_ports"]
+        elif platform.system() == "Windows":
+            results.extend(self._poll_modems_windows())
+
+        results.extend(self._poll_modems_at_ports(claimed_ports))
+        results.extend(self._poll_modems_usb_known(results))
+        results.extend(self._poll_modems_mifi())
+
+        # Drop stale cached AT/MiFi entries (modems unplugged)
+        stale = [k for k, seen in self._modem_seen.items()
+                 if now - seen.get("probed_at", 0) > 300]
+        for k in stale:
+            del self._modem_seen[k]
+
+        return results
+
+    # ------------------------------------------------------------------
+    def _poll_modems_mmcli(self):
+        """Detect modems managed by ModemManager (Linux)."""
+        results = []
+        claimed = set()
+        for idx, brand, model in _mmcli_list():
+            info = _mmcli_modem_info(idx)
+            if not info:
+                continue
+            ports = [p.strip() for p in info.get("general.ports", "").split(",") if p.strip()]
+            claimed.update(ports)
+            entry = self._modem_entry_from_mmcli(idx, info, brand, model)
+            entry["ports"] = ports
+            if info.get("status.state", "").lower() in ("disabled", "failed", "off"):
+                entry["state"] = "disconnected"
+            results.append(entry)
+        return {"modems": results, "claimed_ports": claimed}
+
+    # ------------------------------------------------------------------
+    def _modem_entry_from_mmcli(self, idx, info, brand, model):
+        """Build a modem device entry from parsed mmcli info."""
+        manufacturer = info.get("general.manufacturer", "") or brand
+        model_name = info.get("general.model", "") or model
+        imei = (info.get("3gpp.imei", "") or "").strip()
+        iccid = (info.get("sim.sim_identifier", "") or "").strip()
+        signal_pct = None
+        m = re.search(r"(\d+)", info.get("status.signal_quality", ""))
+        if m:
+            signal_pct = m.group(1)
+        vid, pid = self._match_usb_vidpid(manufacturer, model_name)
+
+        return {
+            "id": f"modem-mm-{idx}",
+            "serial": imei or "",
+            "state": "connected",
+            "mode": "modem",
+            "interface": "ModemManager",
+            "index": idx,
+            "vendorId": vid or "",
+            "productId": pid or "",
+            "vendorName": manufacturer or "Unknown",
+            "productName": model_name or "Cellular Modem",
+            "deviceType": "modem",
+            "chipset": _MODEM_CHIPSET_BY_VID.get((vid or "").upper(), ""),
+            "bootMode": "normal",
+            "imei": imei,
+            "iccid": iccid,
+            "firmware": info.get("general.firmware_rev", ""),
+            "operator": info.get("3gpp.operator_name", "") or info.get("sim.operator_name", ""),
+            "signalQuality": signal_pct,
+            "accessTechnology": info.get("3gpp.access_technologies", ""),
+            "registration": info.get("3gpp.registration_state", ""),
+            "lockState": info.get("status.lock_state", ""),
+            "powerState": info.get("status.power_state", ""),
+            "apn": info.get("bearer.apn", ""),
+            "ipAddress": info.get("bearer.ipv4_address", "") or info.get("bearer.ip_address", ""),
+        }
+
+    # ------------------------------------------------------------------
+    def _poll_modems_at_ports(self, claimed_ports=None):
+        """Detect raw AT-command dongles on serial ports (ttyUSB/ttyACM/COM)."""
+        if _try_serial() is None:
+            return []
+        claimed_ports = claimed_ports or set()
+        results = []
+        now = time.time()
+        for port in _list_modem_serial_ports():
+            if port in claimed_ports:
+                continue
+            cache_key = f"at-{port}"
+            seen = self._modem_seen.get(cache_key)
+            if seen and now - seen.get("probed_at", 0) < self._modem_probe_interval:
+                results.append(seen["entry"])
+                continue
+            info = _at_probe_port(port)
+            if info:
+                entry = self._at_entry_from_info(port, info)
+            elif seen:
+                entry = seen["entry"]
+            else:
+                continue
+            self._modem_seen[cache_key] = {"entry": entry, "probed_at": time.time()}
+            results.append(entry)
+        return results
+
+    # ------------------------------------------------------------------
+    def _at_entry_from_info(self, port, info):
+        """Build a modem device entry from an AT probe response."""
+        manufacturer = _first_at_line(info.get("AT+CGMI", ""))
+        model = _first_at_line(info.get("AT+CGMM", ""))
+        if not model:
+            model = _first_at_line(info.get("ATI", ""))
+        if not manufacturer:
+            m = re.search(r"(?i)manufacturer\s*:\s*(.+)", info.get("ATI", ""))
+            if m:
+                manufacturer = m.group(1).strip()
+
+        m = re.search(r"(\d{15})", info.get("AT+CGSN", ""))
+        imei = m.group(1) if m else ""
+        m = re.search(r"([0-9]{19,20})", info.get("AT+ICCID", ""))
+        iccid = m.group(1) if m else ""
+        signal_pct = None
+        m = re.search(r"\+CSQ:\s*(\d+)", info.get("AT+CSQ", ""))
+        if m:
+            try:
+                csq = int(m.group(1))
+                if csq < 99:
+                    signal_pct = max(0, min(100, int((csq / 31.0) * 100)))
+            except (ValueError, ZeroDivisionError):
+                pass
+
+        product_name = model or manufacturer or "AT Cellular Modem"
+        vid, pid = self._match_usb_vidpid(manufacturer, product_name)
+
+        return {
+            "id": f"modem-at-{port.replace('/dev/', '').replace('/', '-')}",
+            "serial": imei or "",
+            "state": "connected",
+            "mode": "modem",
+            "interface": "AT",
+            "port": port,
+            "vendorId": vid or "",
+            "productId": pid or "",
+            "vendorName": manufacturer or _MODEM_VID_BRAND.get(vid.upper(), "Unknown"),
+            "productName": product_name,
+            "deviceType": "modem",
+            "chipset": _MODEM_CHIPSET_BY_VID.get(vid.upper(), ""),
+            "bootMode": "normal",
+            "imei": imei,
+            "iccid": iccid,
+            "signalQuality": signal_pct,
+        }
+
+    # ------------------------------------------------------------------
+    def _poll_modems_usb_known(self, existing=None):
+        """Fallback: report modems by USB VID alone (no MM/AT access)."""
+        results = []
+        usb_entries = self._get_all_usb_entries()
+        if not usb_entries:
+            return results
+        already = set()
+        for d in existing or []:
+            if d.get("vendorId") and d.get("productId"):
+                already.add((d["vendorId"].upper(), d["productId"].upper()))
+            elif d.get("vendorId"):
+                already.add((d["vendorId"].upper(), ""))
+        seen_ids = set()
+        for entry in usb_entries:
+            vid, pid = self._parse_usb_vidpid(entry)
+            if not vid or vid.upper() not in _MODEM_VID_BRAND:
+                continue
+            if (vid.upper(), pid.upper()) in already:
+                continue
+            key = f"usb-{vid.upper()}:{pid.upper() or '0000'}"
+            if key in seen_ids:
+                continue
+            seen_ids.add(key)
+            brand = _MODEM_VID_BRAND[vid.upper()]
+            results.append({
+                "id": f"modem-usb-{key}",
+                "serial": "",
+                "state": "connected",
+                "mode": "modem",
+                "interface": "USB",
+                "vendorId": vid.upper(),
+                "productId": pid.upper(),
+                "vendorName": brand,
+                "productName": (entry.get("name") or "").split(" - ")[0] or f"{brand} Cellular Modem",
+                "deviceType": "modem",
+                "chipset": _MODEM_CHIPSET_BY_VID.get(vid.upper(), ""),
+                "bootMode": "normal",
+            })
+        return results
+
+    # ------------------------------------------------------------------
+    def _poll_modems_windows(self):
+        """Windows: enumerate PnP modem devices (WMI) as a fallback."""
+        results = []
+        try:
+            r = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-CimInstance Win32_PnPEntity | "
+                 "Where-Object { $_.PNPClass -eq 'Modem' -or $_.Name -match 'modem|mobile broadband|mifi' } | "
+                 "Select-Object Name, DeviceID | ConvertTo-Json -Compress"],
+                capture_output=True, text=True, timeout=8,
+                encoding="utf-8", errors="replace",
+                creationflags=0x08000000,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                data = json.loads(r.stdout)
+                if isinstance(data, dict):
+                    data = [data]
+                for d in data:
+                    name = d.get("Name") or "Cellular Modem"
+                    vid, pid = self._parse_usb_vidpid({"id": d.get("DeviceID", "")})
+                    results.append({
+                        "id": f"modem-pnp-{name}-{vid}:{pid}",
+                        "serial": "",
+                        "state": "connected",
+                        "mode": "modem",
+                        "interface": "Windows",
+                        "vendorId": vid,
+                        "productId": pid,
+                        "vendorName": _MODEM_VID_BRAND.get(vid, "Unknown"),
+                        "productName": name,
+                        "deviceType": "modem",
+                        "chipset": _MODEM_CHIPSET_BY_VID.get(vid, ""),
+                        "bootMode": "normal",
+                    })
+        except Exception:
+            pass
+        return results
+
+    # ------------------------------------------------------------------
+    def _poll_modems_mifi(self):
+        """Probe well-known MiFi admin hosts for a web management page."""
+        now = time.time()
+        if self._last_mifi_probe and now - self._last_mifi_probe < self._modem_probe_interval:
+            return [seen["entry"] for key, seen in self._modem_seen.items()
+                    if key.startswith("mifi-")]
+        self._last_mifi_probe = now
+        results = []
+        for host in _MIFI_ADMIN_HOSTS:
+            cache_key = f"mifi-{host}"
+            info = self._mifi_probe_host(host)
+            if info:
+                entry = {
+                    "id": f"modem-mifi-{host}",
+                    "serial": "",
+                    "state": "connected",
+                    "mode": "mifi",
+                    "interface": "MiFi Web",
+                    "vendorId": "",
+                    "productId": "",
+                    "vendorName": "MiFi Hotspot",
+                    "productName": info.get("title") or f"MiFi @ {host}",
+                    "deviceType": "mifi",
+                    "chipset": "",
+                    "bootMode": "normal",
+                    "adminUrl": f"http://{host}/",
+                    "host": host,
+                }
+                results.append(entry)
+                self._modem_seen[cache_key] = {"entry": entry, "probed_at": now}
+            else:
+                self._modem_seen.pop(cache_key, None)
+        return results
+
+    # ------------------------------------------------------------------
+    def _mifi_probe_host(self, host):
+        """Best-effort HTTP probe of a MiFi admin host."""
+        try:
+            req = urllib.request.Request(f"http://{host}/", headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                body = resp.read(65536).decode("utf-8", "replace")
+            title_m = re.search(r"<title[^>]*>(.*?)</title>", body, re.I | re.S)
+            title = re.sub(r"\s+", " ", title_m.group(1)).strip() if title_m else ""
+            if not title and host == "192.168.8.1":
+                title = "MiFi Admin"
+            lower = title.lower()
+            if title and any(h in lower for h in _MIFI_TITLE_HINTS):
+                return {"host": host, "title": title}
+            return None
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    def _parse_usb_vidpid(self, entry):
+        """Extract (VID, PID) from a USB PnP DeviceID or lsusb line."""
+        did = (entry.get("id") or "").upper()
+        vid = pid = ""
+        if "VID_" in did:
+            try:
+                vid = did[did.index("VID_") + 4: did.index("VID_") + 8]
+            except (ValueError, IndexError):
+                pass
+        if "PID_" in did:
+            try:
+                pid = did[did.index("PID_") + 4: did.index("PID_") + 8]
+            except (ValueError, IndexError):
+                pass
+        if not vid and not pid:
+            m = re.search(r"\bID\s+([0-9A-F]{4}):([0-9A-F]{4})", did)
+            if m:
+                vid, pid = m.group(1), m.group(2)
+        return vid, pid
+
+    # ------------------------------------------------------------------
+    def _match_usb_vidpid(self, manufacturer, model):
+        """Best-effort VID/PID lookup for a modem via USB PnP name matching."""
+        tokens = [t.lower() for t in ((manufacturer or "") + " " + (model or "")).split()
+                  if len(t) > 2]
+        for entry in self._get_all_usb_entries():
+            name = (entry.get("name") or "").lower()
+            if tokens and not any(t in name for t in tokens):
+                continue
+            vid, pid = self._parse_usb_vidpid(entry)
+            if vid:
+                return vid, pid
+        return "", ""
+
+    # ------------------------------------------------------------------
     def _get_all_usb_entries(self):
         """Get all USB PnP entries (Name + DeviceID)"""
         try:
+            if platform.system() == "Linux":
+                r = subprocess.run(["lsusb"], capture_output=True, text=True, timeout=5)
+                return [{"name": line, "id": line}
+                        for line in r.stdout.strip().split("\n") if line]
             r = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
                  "Get-CimInstance Win32_PnPEntity | "

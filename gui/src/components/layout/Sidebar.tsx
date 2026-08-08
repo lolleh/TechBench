@@ -17,6 +17,16 @@ const NAV_ITEMS = [
     color: 'neon-blue',
   },
   {
+    id: 'modems',
+    label: 'Modems',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.592-5.588 14.56-5.588 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+      </svg>
+    ),
+    color: 'neon-green',
+  },
+  {
     id: 'mirror',
     label: 'Mirror',
     icon: (

@@ -19,10 +19,11 @@ import { DeviceMirror } from './components/DeviceMirror/DeviceMirror'
 import { JailbreakTool } from './components/Jailbreak/Jailbreak'
 import { ICloudTool } from './components/iCloud/iCloud'
 import { AppleTools } from './components/AppleTools/AppleTools'
+import { ModemManager } from './components/ModemManager/ModemManager'
 import { tauri } from './lib/tauri'
 import { useDeviceStore } from './lib/deviceStore'
 
-type View = 'devices' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'mirror' | 'jailbreak' | 'icloud' | 'appletools' | 'settings'
+type View = 'devices' | 'modems' | 'signal' | 'schematic' | 'power' | 'flash' | 'recovery' | 'history' | 'partitions' | 'commands' | 'health' | 'batch' | 'firmware' | 'mirror' | 'jailbreak' | 'icloud' | 'appletools' | 'settings'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('devices')
@@ -92,6 +93,8 @@ function App() {
     switch (activeView) {
       case 'devices':
         return <DeviceManager />
+      case 'modems':
+        return <ModemManager />
       case 'signal':
         return <SignalAnalyzer />
       case 'schematic':

@@ -18,6 +18,13 @@ libusb-1.0-0-dev
 python3-usb
 python3-serial
 
+# Cellular Modems / MiFi / Dongles
+modemmanager
+mmcli
+libqmi-utils
+libmbim-utils
+mobile-broadband-provider-info
+
 # Device Detection
 udev
 udisks2

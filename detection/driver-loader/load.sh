@@ -74,6 +74,26 @@ case "${VENDOR_ID}:${PRODUCT_ID}" in
         log "Detected Google Pixel"
         MODULES="$BASE_MODULES"
         ;;
+    "05c6:9025"|"05c6:9225"|"05c6:9003"|"1199:68a3"|"1546:1102")
+        # Qualcomm / Sierra / u-blox cellular modem (CDC-ACM / QMI)
+        log "Detected Qualcomm-based cellular modem"
+        MODULES="$BASE_MODULES qcserial qmi_wwan"
+        ;;
+    "12d1:1c0b"|"12d1:1506"|"19d2:0117")
+        # Huawei / ZTE cellular modem (usually CDC-ACM)
+        log "Detected Huawei/ZTE cellular modem"
+        MODULES="$BASE_MODULES cdc_acm cdc_ether"
+        ;;
+    "2c7c:0125"|"2c7c:0306"|"2cb7:0001")
+        # Quectel / Fibocom LTE module (MBIM / QMI)
+        log "Detected Quectel/Fibocom LTE module"
+        MODULES="$BASE_MODULES cdc_mbim qmi_wwan cdc_acm"
+        ;;
+    "1e0e:9115")
+        # SIMCom module
+        log "Detected SIMCom module"
+        MODULES="$BASE_MODULES cdc_acm"
+        ;;
     *)
         # Unknown device, try generic modules
         warn "Unknown device, loading generic modules"

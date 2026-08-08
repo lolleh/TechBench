@@ -1,4 +1,4 @@
-import type { Device, DeviceType, BootMode, PowerReading, Partition, DeviceHealth } from './types'
+import type { Device, DeviceType, BootMode, PowerReading, Partition, DeviceHealth, Modem, ModemInfo } from './types'
 
 let psuOn = false
 let psuVoltage = 4.2
@@ -54,6 +54,7 @@ export const tauri = {
                 : mode === 'diag' ? ['diag']
                 : mode === 'serial' || mode === 'uart' ? ['serial']
                 : mode === 'adb' ? ['adb']
+                : mode === 'modem' || mode === 'mifi' ? ['mmcli', 'at']
                 : mode === 'usb' ? []
                 : ['adb'],
               container: null,
@@ -89,6 +90,43 @@ export const tauri = {
       }
     }
     return []
+  },
+  fetchModems: async (): Promise<Modem[]> => {
+    if (API_BASE) {
+      try {
+        const response = await fetch(`${API_BASE}/api/modems`)
+        if (response.ok) return await response.json() as Modem[]
+      } catch {
+        // API not available
+      }
+    }
+    return []
+  },
+  readModemInfo: async (): Promise<{ available: boolean; message: string; modems: ModemInfo[] }> => {
+    const empty = { available: false, message: 'Unable to reach TechBench server', modems: [] }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/modems/info`)
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  sendModemAt: async (port: string, index: number | null, command: string): Promise<{ success: boolean; message: string; response: string }> => {
+    const empty = { success: false, message: 'Unable to reach TechBench server', response: '' }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/modems/at`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port, index, command }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
   },
   fetchIosApps: async (): Promise<{ available: boolean; apps: Array<{ id: string; packageName: string; appName: string; version: string; isSystem: boolean }>; error: string }> => {
     if (API_BASE) {

@@ -10,6 +10,8 @@ const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> 
   qualcomm: { bg: 'bg-neon-blue/10', text: 'text-neon-blue', border: 'border-neon-blue/20' },
   mediatek: { bg: 'bg-neon-orange/10', text: 'text-neon-orange', border: 'border-neon-orange/20' },
   samsung: { bg: 'bg-bench-400/10', text: 'text-bench-400', border: 'border-bench-400/20' },
+  modem: { bg: 'bg-neon-cyan/10', text: 'text-neon-cyan', border: 'border-neon-cyan/20' },
+  mifi: { bg: 'bg-neon-purple/10', text: 'text-neon-purple', border: 'border-neon-purple/20' },
   generic: { bg: 'bg-white/5', text: 'text-white/50', border: 'border-white/10' },
 }
 

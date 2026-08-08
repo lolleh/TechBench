@@ -800,5 +800,113 @@
     "tools": ["idevicerestore", "checkm8", "libimobiledevice"],
     "container": "apple-tools",
     "note": "checkm8 only works on A11 and below"
+  },
+  "05c6:9025": {
+    "vendor": "qualcomm",
+    "chipset": "qualcomm",
+    "name": "Qualcomm Gobi 2000 Modem",
+    "description": "Qualcomm cellular modem / mobile broadband dongle",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "05c6:9225": {
+    "vendor": "qualcomm",
+    "chipset": "qualcomm",
+    "name": "Qualcomm Gobi 3000 Modem",
+    "description": "Qualcomm cellular modem / mobile broadband dongle",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "05c6:9003": {
+    "vendor": "qualcomm",
+    "chipset": "qualcomm",
+    "name": "Qualcomm HS-USB Modem",
+    "description": "Qualcomm cellular modem in modem mode",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "12d1:1c0b": {
+    "vendor": "huawei",
+    "chipset": "hisilicon",
+    "name": "Huawei LTE Dongle",
+    "description": "Huawei E-series 4G/LTE USB modem (MiFi/dongle)",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "12d1:1506": {
+    "vendor": "huawei",
+    "chipset": "hisilicon",
+    "name": "Huawei 3G Modem",
+    "description": "Huawei E-series 3G USB modem",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "19d2:0117": {
+    "vendor": "zte",
+    "chipset": "qualcomm",
+    "name": "ZTE MF-series Modem",
+    "description": "ZTE MF-series cellular modem / MiFi dongle",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "2c7c:0125": {
+    "vendor": "qualcomm",
+    "chipset": "qualcomm",
+    "name": "Quectel EC25 LTE Modem",
+    "description": "Quectel EC25 series 4G LTE module",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "2c7c:0306": {
+    "vendor": "qualcomm",
+    "chipset": "qualcomm",
+    "name": "Quectel EG25-G LTE Modem",
+    "description": "Quectel EG25-G 4G LTE module (common in single-board computers)",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "1e0e:9115": {
+    "vendor": "spreadtrum",
+    "chipset": "spreadtrum",
+    "name": "SIMCom SIM7x00 Modem",
+    "description": "SIMCom SIM7x00 series 2G/4G cellular module",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "1199:68a3": {
+    "vendor": "sierra",
+    "chipset": "qualcomm",
+    "name": "Sierra Wireless AirCard Modem",
+    "description": "Sierra Wireless AirCard mobile broadband modem",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "1546:1102": {
+    "vendor": "ublox",
+    "chipset": "ublox",
+    "name": "u-blox TOBY-L4 / LARA-R Modem",
+    "description": "u-blox cellular modem module",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
+  },
+  "2cb7:0001": {
+    "vendor": "fibocom",
+    "chipset": "qualcomm",
+    "name": "Fibocom L850-GL Modem",
+    "description": "Fibocom L850-GL LTE module",
+    "boot_modes": ["normal"],
+    "tools": ["mmcli", "at"],
+    "container": "mobile-service"
   }
 }

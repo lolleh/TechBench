@@ -7,6 +7,8 @@ const DEVICE_ICONS: Record<string, { emoji: string; gradient: string }> = {
   qualcomm: { emoji: '📡', gradient: 'from-neon-blue/20 to-bench-600/20' },
   mediatek: { emoji: '🔧', gradient: 'from-neon-orange/20 to-neon-yellow/20' },
   samsung: { emoji: '📱', gradient: 'from-bench-400/20 to-neon-blue/20' },
+  modem: { emoji: '📡', gradient: 'from-neon-cyan/20 to-bench-600/20' },
+  mifi: { emoji: '📶', gradient: 'from-neon-purple/20 to-neon-blue/20' },
   generic: { emoji: '🔌', gradient: 'from-white/10 to-white/5' },
 }
 
