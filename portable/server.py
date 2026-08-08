@@ -454,6 +454,9 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         # API: Detailed modem info (fresh ModemManager read)
         elif self.path.startswith("/api/modems/info"):
             self._send_json(self._modem_info_all())
+        # API: Modem unlock operation catalog
+        elif self.path.startswith("/api/modems/unlock"):
+            self._send_json(_modem_unlock_catalog())
         # API: List installed iOS apps
         elif self.path == "/api/ios/apps":
             self._send_json(self._list_ios_apps())
@@ -522,6 +525,8 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._handle_mdm()
         elif self.path.startswith("/api/modems/at"):
             self._handle_modem_at()
+        elif self.path.startswith("/api/modems/unlock"):
+            self._handle_modem_unlock()
         elif self.path.startswith("/api/update"):
             self._handle_update()
         else:
@@ -924,37 +929,137 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
         if not command:
             self._send_json({"success": False, "message": "command is required"})
             return
-        # Prefer ModemManager command mode when an index is supplied.
-        if index is not None:
-            mmcli = shutil.which("mmcli")
-            if not mmcli:
-                self._send_json({"success": False, "message": "mmcli not installed"})
-                return
-            try:
-                r = subprocess.run(
-                    [mmcli, "-m", str(index), "--command", command],
-                    capture_output=True, text=True, timeout=15,
-                    encoding="utf-8", errors="replace",
-                    creationflags=0x08000000 if platform.system() == "Windows" else 0,
-                )
-                out = ((r.stdout or "") + "\n" + (r.stderr or "")).strip()
-                m = re.search(r"response:\s*(.*)", out, re.I | re.S)
-                response = m.group(1).strip() if m else out
-                self._send_json({"success": r.returncode == 0, "port": port, "index": index,
-                                 "command": command, "response": response})
-                return
-            except Exception as e:
-                self._send_json({"success": False, "message": f"mmcli failed: {e}"})
-                return
-        if not port:
+        if index is None and not port:
             self._send_json({"success": False,
                              "message": "port is required (or supply index for ModemManager)"})
             return
-        response = _at_single_query(port, command)
+        response = _run_modem_at(index=index, port=port, command=command)
         if response is None:
-            self._send_json({"success": False, "message": f"Could not open serial port {port}"})
+            where = f"index {index}" if index is not None else f"serial port {port}"
+            self._send_json({"success": False, "message": f"Could not reach modem via {where}"})
             return
-        self._send_json({"success": True, "port": port, "command": command, "response": response})
+        self._send_json({"success": True, "port": port, "index": index,
+                         "command": command, "response": response})
+
+    def _handle_modem_unlock(self):
+        """Modem carrier/network lock status + unlock-code entry.
+
+        A carrier-supplied unlock code is always required. This reads the lock
+        state (AT+CLCK personalisation and/or vendor commands) and enters the
+        provided NCK/PCK/SPC code via the modem's AT interface.
+        """
+        payload = {}
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            pass
+        port = (payload.get("port") or "").strip()
+        index = payload.get("index")
+        vendor = (payload.get("vendor") or "").strip().lower()
+        action = (payload.get("action") or "status").lower()
+        code_type = (payload.get("codeType") or "nck").lower()
+        code = (payload.get("code") or "").strip()
+
+        modem_entry = None
+        if _poller:
+            for m in _poller.get_modems():
+                ports = m.get("ports") or []
+                if (index is not None and m.get("index") == index) or \
+                   (port and (m.get("port") == port or port in ports)):
+                    modem_entry = m
+                    break
+
+        if not port and index is None:
+            if _poller:
+                modems = _poller.get_modems()
+                if modems:
+                    modem_entry = modems[0]
+                    index = modem_entry.get("index")
+                    port = modem_entry.get("port")
+            if port is None and index is None:
+                self._send_json({"success": False, "error": "No modem connected", "steps": []})
+                return
+
+        if not vendor:
+            vendor = _detect_modem_vendor(
+                (modem_entry or {}).get("vendorName", ""),
+                (modem_entry or {}).get("productName", ""),
+                (modem_entry or {}).get("vendorId", ""),
+            )
+        catalog = _MODEM_UNLOCK_CATALOG.get(vendor) or _MODEM_UNLOCK_CATALOG["generic"]
+
+        steps = []
+
+        if action == "unlock":
+            if not code:
+                self._send_json({"success": False, "error": "An unlock code is required",
+                                 "steps": []})
+                return
+            facility = _MODEM_FACILITIES.get(code_type, {}).get("facility", "PN")
+            tpl = (catalog.get("unlock") or {}).get(code_type) or \
+                  f'AT+CLCK="{facility}",0,"{{code}}"'
+            command = tpl.format(code=code)
+            resp = _run_modem_at(index=index, port=port, command=command)
+            ok = resp is not None
+            steps.append({
+                "label": f"Enter {_MODEM_FACILITIES.get(code_type, {}).get('label', code_type.upper())}"
+                         f" unlock code ({vendor})",
+                "command": command,
+                "ok": ok,
+                "output": resp if ok else "(no response - port/index may not accept AT)",
+            })
+            unlocked = ok and "OK" in resp.upper() and "ERROR" not in resp.upper()
+            self._send_json({
+                "success": True,
+                "vendor": vendor,
+                "steps": steps,
+                "unlocked": unlocked,
+                "message": ("Unlock code accepted by the modem." if unlocked else
+                            "Unlock code submitted, but the modem did not report OK. "
+                            "Review the output; repeated wrong codes can permanently lock "
+                            "the modem, so stop and verify the code if you see 'ERROR'."),
+            })
+            return
+
+        # status: read identity + lock state
+        for cmd in ("AT+CGSN", "AT+CIMI"):
+            resp = _run_modem_at(index=index, port=port, command=cmd)
+            steps.append({
+                "label": cmd,
+                "command": cmd,
+                "ok": resp is not None,
+                "output": resp if resp is not None else "(no response)",
+            })
+        for cmd in catalog.get("query", []):
+            if cmd in ("AT+CGSN", "AT+CIMI"):
+                continue
+            resp = _run_modem_at(index=index, port=port, command=cmd)
+            steps.append({
+                "label": cmd,
+                "command": cmd,
+                "ok": resp is not None,
+                "output": resp if resp is not None else "(no response)",
+            })
+
+        # Lightweight lock-state hint from responses
+        all_out = "\n".join((s["output"] or "") for s in steps).lower()
+        hint = None
+        if any(w in all_out for w in ("unlocked", "not require", ": 0")):
+            hint = "Lock state appears UNLOCKED."
+        elif any(w in all_out for w in ("locked", "require", "error")):
+            hint = "Lock state appears LOCKED - an unlock code is required."
+
+        self._send_json({
+            "success": True,
+            "vendor": vendor,
+            "steps": steps,
+            "unlocked": None,
+            "message": ("Modem lock status read. " + (hint or "")
+                        + (" A carrier-supplied unlock code is needed to complete any unlock."
+                           if hint and "LOCKED" in (hint or "") else "")
+                        + (" If the lock state looks wrong, confirm the vendor above is correct."
+                           if vendor == "generic" else "")),
+        })
 
     def _read_body(self):
         """Read the raw request body"""
@@ -3585,6 +3690,221 @@ def _mmcli_modem_info(idx):
         return _parse_mmcli(r.stdout)
     except Exception:
         return None
+
+
+def _run_modem_at(index=None, port=None, command=None, timeout=15):
+    """Run an AT command via ModemManager (index) or a serial port.
+
+    Returns the modem response text, or None if the command could not be run.
+    """
+    if not command:
+        return None
+    if index is not None:
+        mmcli = shutil.which("mmcli")
+        if not mmcli:
+            return None
+        try:
+            r = subprocess.run(
+                [mmcli, "-m", str(index), "--command", command],
+                capture_output=True, text=True, timeout=timeout,
+                encoding="utf-8", errors="replace",
+                creationflags=0x08000000 if platform.system() == "Windows" else 0,
+            )
+            out = ((r.stdout or "") + "\n" + (r.stderr or "")).strip()
+            m = re.search(r"response:\s*(.*)", out, re.I | re.S)
+            return m.group(1).strip() if m else (out if out else None)
+        except Exception:
+            return None
+    if port:
+        return _at_single_query(port, command, timeout=5.0)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Modem carrier / network unlock engine
+#
+# No tool can silently unlock a carrier-locked modem: a carrier-supplied
+# unlock code (NCK / PCK / SPC) is always required. These helpers read the
+# lock state and enter the code over the modem's AT command interface
+# (ModemManager `--command` or a direct serial port).
+# ---------------------------------------------------------------------------
+
+# 3GPP TS 27.007 personalisation facilities exposed to the user.
+_MODEM_FACILITIES = {
+    "nck": {"label": "NCK (Network)", "facility": "PN"},
+    "pck": {"label": "PCK (Corporate)", "facility": "PC"},
+    "spc": {"label": "SPC (Service Provider)", "facility": "SP"},
+}
+
+# USB vendor ID -> unlock vendor key (used when the modem does not self-report).
+_MODEM_UNLOCK_VID = {
+    "12D1": "huawei",
+    "19D2": "zte",
+    "2C7C": "quectel",
+    "1E0E": "simcom",
+    "1BC7": "telit",
+    "2CB7": "fibocom",
+    "1546": "ublox",
+    "05C6": "qualcomm",
+    "1415": "qualcomm",
+}
+
+# Per-vendor lock-status queries and unlock command templates.
+# "{code}" is replaced with the supplied unlock code.
+_MODEM_UNLOCK_CATALOG = {
+    "generic": {
+        "name": "Generic (3GPP AT+CLCK)",
+        "detect": (),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2', "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "Standard 3GPP personalisation commands used by most modules.",
+    },
+    "qualcomm": {
+        "name": "Qualcomm (Gobi / MDM)",
+        "detect": ("qualcomm",),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2', "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "Qualcomm Gobi / MDM-based dongles use standard 3GPP commands. "
+                 "Many are actually branded Quectel/Sierra - pick the brand if listed.",
+    },
+    "huawei": {
+        "name": "Huawei",
+        "detect": ("huawei",),
+        "query": ["AT^CARDLOCK=2", 'AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT^CARDLOCK="{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "Huawei E-series dongles use the proprietary ^CARDLOCK command. "
+                 "AT^CARDLOCK=2 returns e.g. ^CARDLOCK: 2,0,0 (state, ctrl, attempts).",
+    },
+    "zte": {
+        "name": "ZTE",
+        "detect": ("zte",),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+ZENTP", "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "ZTE MF-series dongles accept standard 3GPP personalisation commands.",
+    },
+    "quectel": {
+        "name": "Quectel",
+        "detect": ("quectel",),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "Quectel modules (EC25, EG25-G, BG95, MC60...) use standard commands. "
+                 "AT+CLCK=\"PN\",2 returns the network lock status.",
+    },
+    "simcom": {
+        "name": "SIMCom",
+        "detect": ("simcom",),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "SIMCom modules (SIM7x00, SIM7600...) use standard commands.",
+    },
+    "telit": {
+        "name": "Telit",
+        "detect": ("telit",),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "Telit modules (HE910, LE910, ME910...) use standard commands.",
+    },
+    "fibocom": {
+        "name": "Fibocom",
+        "detect": ("fibocom",),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "Fibocom modules (L850-GL, L610...) use standard commands.",
+    },
+    "ublox": {
+        "name": "u-blox",
+        "detect": ("ublox", "u-blox"),
+        "query": ['AT+CLCK="PN",2', 'AT+CLCK="PC",2', 'AT+CLCK="SP",2',
+                  "AT+CIMI", "AT+CGSN"],
+        "unlock": {
+            "nck": 'AT+CLCK="PN",0,"{code}"',
+            "pck": 'AT+CLCK="PC",0,"{code}"',
+            "spc": 'AT+CLCK="SP",0,"{code}"',
+        },
+        "notes": "u-blox modules (TOBY-L4, LARA-R, SARA...) use standard commands.",
+    },
+}
+
+
+def _detect_modem_vendor(vendor_name, product_name, vid):
+    """Best-effort modem vendor detection from self-reported names + USB VID.
+
+    Specific brands (Huawei, ZTE, Quectel, ...) sit on top of Qualcomm/MDK
+    chipsets, so they are checked before the chipset-level vendor.
+    """
+    text = f"{vendor_name or ''} {product_name or ''}".lower()
+    vid = (vid or "").upper()
+    for key in ("huawei", "zte", "quectel", "simcom", "telit", "fibocom", "ublox"):
+        entry = _MODEM_UNLOCK_CATALOG[key]
+        if vid and _MODEM_UNLOCK_VID.get(vid) == key:
+            return key
+        if any(tok in text for tok in entry.get("detect", ())):
+            return key
+    for key in ("qualcomm",):
+        entry = _MODEM_UNLOCK_CATALOG[key]
+        if vid and _MODEM_UNLOCK_VID.get(vid) == key:
+            return key
+        if any(tok in text for tok in entry.get("detect", ())):
+            return key
+    return "generic"
+
+
+def _modem_unlock_catalog():
+    """Public catalog of supported modem unlock vendors and operations."""
+    return {
+        "vendors": [
+            {
+                "id": key,
+                "name": entry["name"],
+                "notes": entry.get("notes", ""),
+                "query": entry.get("query", []),
+                "codeTypes": sorted(entry.get("unlock", {}).keys()),
+            }
+            for key, entry in _MODEM_UNLOCK_CATALOG.items()
+        ],
+        "facilities": [
+            {"id": key, "label": value["label"], "facility": value["facility"]}
+            for key, value in _MODEM_FACILITIES.items()
+        ],
+    }
 
 
 class DevicePoller:

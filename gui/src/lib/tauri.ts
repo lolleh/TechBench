@@ -128,6 +128,55 @@ export const tauri = {
     }
     return empty
   },
+  modemUnlockCatalog: async (): Promise<{
+    vendors: Array<{ id: string; name: string; notes: string; query: string[]; codeTypes: string[] }>
+    facilities: Array<{ id: string; label: string; facility: string }>
+  }> => {
+    const empty = { vendors: [], facilities: [] }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/modems/unlock`)
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
+  modemUnlock: async (
+    action: 'status' | 'unlock',
+    modem: Modem,
+    vendor: string,
+    codeType: string,
+    code: string,
+  ): Promise<{
+    success: boolean
+    error: string
+    message: string
+    unlocked: boolean | null
+    vendor: string
+    steps: Array<{ label: string; command: string; ok: boolean; output: string }>
+  }> => {
+    const empty = { success: false, error: 'Unable to reach TechBench server', message: '', unlocked: null, vendor: '', steps: [] }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/modems/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          port: modem.port || '',
+          index: modem.index ?? null,
+          vendor,
+          codeType,
+          code,
+        }),
+      })
+      if (response.ok) return await response.json() as typeof empty
+    } catch {
+      // API not available
+    }
+    return empty
+  },
   fetchIosApps: async (): Promise<{ available: boolean; apps: Array<{ id: string; packageName: string; appName: string; version: string; isSystem: boolean }>; error: string }> => {
     if (API_BASE) {
       try {

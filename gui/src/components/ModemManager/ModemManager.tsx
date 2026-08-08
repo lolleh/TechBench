@@ -20,6 +20,38 @@ const TYPE_BADGES: Record<string, { bg: string; text: string; border: string }> 
   mifi: { bg: 'bg-neon-purple/10', text: 'text-neon-purple', border: 'border-neon-purple/20' },
 }
 
+interface UnlockVendor {
+  id: string
+  name: string
+  notes: string
+  query: string[]
+  codeTypes: string[]
+}
+interface UnlockFacility {
+  id: string
+  label: string
+  facility: string
+}
+interface UnlockStep {
+  label: string
+  command: string
+  ok: boolean
+  output: string
+}
+
+const VENDOR_VIDS: Record<string, string> = {
+  '12D1': 'huawei',
+  '19D2': 'zte',
+  '2C7C': 'quectel',
+  '1E0E': 'simcom',
+  '1BC7': 'telit',
+  '2CB7': 'fibocom',
+  '1546': 'ublox',
+  '05C6': 'qualcomm',
+  '1415': 'qualcomm',
+}
+const VENDOR_KEYWORDS = ['huawei', 'zte', 'quectel', 'simcom', 'telit', 'fibocom', 'ublox', 'qualcomm']
+
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
@@ -43,17 +75,48 @@ export function ModemManager() {
   const [atBusy, setAtBusy] = useState(false)
   const [atError, setAtError] = useState<string | null>(null)
 
+  const [unlockCatalog, setUnlockCatalog] = useState<{ vendors: UnlockVendor[]; facilities: UnlockFacility[] }>({ vendors: [], facilities: [] })
+  const [unlockVendor, setUnlockVendor] = useState('generic')
+  const [unlockCodeType, setUnlockCodeType] = useState('nck')
+  const [unlockCode, setUnlockCode] = useState('')
+  const [unlockBusy, setUnlockBusy] = useState(false)
+  const [unlockError, setUnlockError] = useState<string | null>(null)
+  const [unlockResult, setUnlockResult] = useState<{ message: string; unlocked: boolean | null; steps: UnlockStep[] } | null>(null)
+
   const poll = async () => {
     setModems(await tauri.fetchModems())
   }
 
+  const loadUnlockCatalog = async () => {
+    const catalog = await tauri.modemUnlockCatalog()
+    setUnlockCatalog(catalog)
+  }
+
   useEffect(() => {
     poll()
+    loadUnlockCatalog()
     const interval = setInterval(poll, 3000)
     return () => clearInterval(interval)
   }, [])
 
   const selected = modems.find((m) => m.id === selectedId) || null
+
+  const detectVendor = (modem: Modem | null): string => {
+    if (!modem) return 'generic'
+    const vid = (modem.vendorId || '').toUpperCase()
+    if (VENDOR_VIDS[vid]) return VENDOR_VIDS[vid]
+    const text = `${modem.vendorName || ''} ${modem.productName || ''}`.toLowerCase()
+    for (const keyword of VENDOR_KEYWORDS) {
+      if (text.includes(keyword)) return keyword
+    }
+    return 'generic'
+  }
+
+  useEffect(() => {
+    setUnlockVendor(detectVendor(selected))
+    setUnlockResult(null)
+    setUnlockError(null)
+  }, [selectedId])
 
   const handleReadDetails = async () => {
     setRefreshing(true)
@@ -95,6 +158,26 @@ export function ModemManager() {
       setAtError(`AT command error: ${err}`)
     } finally {
       setAtBusy(false)
+    }
+  }
+
+  const runUnlock = async (action: 'status' | 'unlock') => {
+    if (!selected) return
+    setUnlockBusy(true)
+    setUnlockError(null)
+    setUnlockResult(null)
+    try {
+      const result = await tauri.modemUnlock(action, selected, unlockVendor, unlockCodeType, unlockCode.trim())
+      if (result.success) {
+        setUnlockResult({ message: result.message, unlocked: result.unlocked, steps: result.steps })
+        if (result.vendor) setUnlockVendor(result.vendor)
+      } else {
+        setUnlockError(result.error || result.message || (action === 'unlock' ? 'Unlock failed' : 'Status check failed'))
+      }
+    } catch (err) {
+      setUnlockError(`${action === 'unlock' ? 'Unlock' : 'Status check'} error: ${err}`)
+    } finally {
+      setUnlockBusy(false)
     }
   }
 
@@ -179,6 +262,7 @@ export function ModemManager() {
           </div>
         ) : (
           <>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 shrink-0">
             {/* Detail card */}
             <div className="glass rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
@@ -248,6 +332,105 @@ export function ModemManager() {
                   <Field label="Signal" value={selected.signalQuality !== undefined && selected.signalQuality !== null ? `${selected.signalQuality}%` : ''} />
                 </div>
               )}
+            </div>
+
+            {/* Unlock tools card */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-white/80">Unlock Tools</h3>
+                <span className="text-[10px] text-white/30">Carrier / network lock</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">Vendor</label>
+                  <select
+                    value={unlockVendor}
+                    onChange={(e) => { setUnlockVendor(e.target.value); setUnlockResult(null); setUnlockError(null) }}
+                    className="flex-1 bg-surface-2/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white/75 focus:outline-none focus:border-neon-cyan/40"
+                  >
+                    {unlockCatalog.vendors.map((v) => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">Code type</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {unlockCatalog.facilities.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setUnlockCodeType(f.id)}
+                        className={`text-[10px] px-2 py-1 rounded border transition-all ${
+                          unlockCodeType === f.id
+                            ? 'bg-neon-purple/15 text-neon-purple border-neon-purple/40'
+                            : 'bg-surface-2/40 text-white/40 border-white/5 hover:border-white/10'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">Code</label>
+                  <input
+                    value={unlockCode}
+                    onChange={(e) => setUnlockCode(e.target.value)}
+                    placeholder="8-digit code from carrier"
+                    spellCheck={false}
+                    className="flex-1 bg-surface-2/60 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-mono text-white/80 focus:outline-none focus:border-neon-purple/40"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => runUnlock('status')}
+                    disabled={unlockBusy}
+                    className="flex-1 text-xs px-3 py-2 rounded-lg bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
+                  >
+                    {unlockBusy ? 'Working...' : 'Check Lock Status'}
+                  </button>
+                  <button
+                    onClick={() => runUnlock('unlock')}
+                    disabled={unlockBusy || !unlockCode.trim()}
+                    className="flex-1 text-xs px-3 py-2 rounded-lg bg-neon-purple/15 text-neon-purple border border-neon-purple/40 hover:bg-neon-purple/25 transition-all disabled:opacity-40"
+                  >
+                    {unlockBusy ? 'Working...' : 'Submit Unlock Code'}
+                  </button>
+                </div>
+
+                {unlockError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+                    <p className="text-[11px] text-red-400">{unlockError}</p>
+                  </div>
+                )}
+
+                {unlockResult && (
+                  <div className="bg-black/40 border border-white/5 rounded-lg p-2.5 max-h-52 overflow-y-auto custom-scrollbar">
+                    <p className={`text-[11px] mb-1.5 ${unlockResult.unlocked === true ? 'text-neon-green' : unlockResult.unlocked === false ? 'text-amber-400' : 'text-white/50'}`}>
+                      {unlockResult.message}
+                    </p>
+                    {unlockResult.steps.map((step, i) => (
+                      <div key={i} className="mb-1.5 last:mb-0">
+                        <div className="flex items-center gap-2">
+                          <span className={step.ok ? 'text-neon-green' : 'text-red-400'}>
+                            {step.ok ? '✓' : '✗'}
+                          </span>
+                          <span className="text-[11px] text-white/70">{step.label}</span>
+                        </div>
+                        <div className="text-[10px] text-white/30 font-mono pl-5">{step.command}</div>
+                        {step.output && (
+                          <div className="text-[10px] text-white/40 font-mono pl-5 whitespace-pre-wrap">{step.output}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             </div>
 
             {/* AT console */}
