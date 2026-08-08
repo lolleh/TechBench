@@ -3787,8 +3787,10 @@ def main():
     # Start background device poller
     _poller = DevicePoller(poll_interval=2.0)
 
-    # Auto-open browser
-    Timer(1.5, lambda: webbrowser.open(f"http://localhost:{PORT}")).start()
+    # Auto-open browser only when launched manually (browser mode).
+    # The desktop app sets TECHBENCH_PARENT_PID, so it never opens a browser.
+    if not os.environ.get("TECHBENCH_PARENT_PID"):
+        Timer(1.5, lambda: webbrowser.open(f"http://localhost:{PORT}")).start()
 
     try:
         server = ThreadingHTTPServer(("0.0.0.0", PORT), TechBenchHandler)
