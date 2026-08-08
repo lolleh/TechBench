@@ -34,7 +34,7 @@ interface UnlockFacility {
 }
 interface UnlockStep {
   label: string
-  command: string
+  command?: string
   ok: boolean
   output: string
 }
@@ -83,6 +83,14 @@ export function ModemManager() {
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [unlockResult, setUnlockResult] = useState<{ message: string; unlocked: boolean | null; steps: UnlockStep[] } | null>(null)
 
+  const [ztePassword, setZtePassword] = useState('admin')
+  const [zteGateway, setZteGateway] = useState('')
+  const [zteImei, setZteImei] = useState('')
+  const [zteCode, setZteCode] = useState('')
+  const [zteBusy, setZteBusy] = useState(false)
+  const [zteError, setZteError] = useState<string | null>(null)
+  const [zteResult, setZteResult] = useState<{ message: string; unlocked: boolean | null; imei: string; nckAttempts: string; base: string; steps: UnlockStep[]; warning: string; compatBlocked: boolean } | null>(null)
+
   const poll = async () => {
     setModems(await tauri.fetchModems())
   }
@@ -116,7 +124,46 @@ export function ModemManager() {
     setUnlockVendor(detectVendor(selected))
     setUnlockResult(null)
     setUnlockError(null)
+    if (selected) {
+      const vid = (selected.vendorId || '').toUpperCase()
+      if (vid === '19D2') {
+        setZteGateway(zteGateway || '192.168.0.1')
+      }
+    }
   }, [selectedId])
+
+  const runZteWebUnlock = async () => {
+    setZteBusy(true)
+    setZteError(null)
+    setZteResult(null)
+    try {
+      const result = await tauri.zteWebUnlock({
+        gateway: zteGateway.trim() || undefined,
+        password: ztePassword,
+        imei: zteImei.trim() || undefined,
+        code: zteCode.trim() || undefined,
+      })
+      if (result.success || result.steps.length > 0) {
+        setZteResult({
+          message: result.message || (result.error || ''),
+          unlocked: result.unlocked,
+          imei: result.imei,
+          nckAttempts: result.nckAttempts,
+          base: result.base,
+          steps: result.steps,
+          warning: result.warning || '',
+          compatBlocked: result.compatBlocked || false,
+        })
+        if (result.imei) setZteImei(result.imei)
+      } else {
+        setZteError(result.error || result.message || 'ZTE web unlock failed')
+      }
+    } catch (err) {
+      setZteError(`ZTE web unlock error: ${err}`)
+    } finally {
+      setZteBusy(false)
+    }
+  }
 
   const handleReadDetails = async () => {
     setRefreshing(true)
@@ -422,6 +469,111 @@ export function ModemManager() {
                           <span className="text-[11px] text-white/70">{step.label}</span>
                         </div>
                         <div className="text-[10px] text-white/30 font-mono pl-5">{step.command}</div>
+                        {step.output && (
+                          <div className="text-[10px] text-white/40 font-mono pl-5 whitespace-pre-wrap">{step.output}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ZTE web (HiLink) unlock card */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-white/80">ZTE Web Unlock</h3>
+                <span className="text-[10px] text-white/30">HiLink / no AT port</span>
+              </div>
+              <p className="text-[10px] text-white/30 mb-3">
+                For ZX297520V3 MiFi (MF927U/TU, H220m…) that expose no AT port. Logs into the
+                device web UI (goform API) and submits the NCK. Leave the code blank to compute
+                it from the IMEI automatically.
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">Gateway</label>
+                  <input
+                    value={zteGateway}
+                    onChange={(e) => { setZteGateway(e.target.value); setZteResult(null); setZteError(null) }}
+                    placeholder="192.168.0.1 (auto-detect)"
+                    spellCheck={false}
+                    className="flex-1 bg-surface-2/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono text-white/75 focus:outline-none focus:border-neon-cyan/40"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">Password</label>
+                  <input
+                    type="password"
+                    value={ztePassword}
+                    onChange={(e) => setZtePassword(e.target.value)}
+                    placeholder="admin"
+                    spellCheck={false}
+                    className="flex-1 bg-surface-2/60 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-white/75 focus:outline-none focus:border-neon-cyan/40"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">IMEI</label>
+                  <input
+                    value={zteImei}
+                    onChange={(e) => setZteImei(e.target.value)}
+                    placeholder="auto-read from device"
+                    spellCheck={false}
+                    className="flex-1 bg-surface-2/60 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] font-mono text-white/75 focus:outline-none focus:border-neon-cyan/40"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-white/40 w-16 shrink-0">Code</label>
+                  <input
+                    value={zteCode}
+                    onChange={(e) => setZteCode(e.target.value)}
+                    placeholder="leave blank to compute from IMEI"
+                    spellCheck={false}
+                    className="flex-1 bg-surface-2/60 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] font-mono text-white/75 focus:outline-none focus:border-neon-cyan/40"
+                  />
+                </div>
+
+                <button
+                  onClick={runZteWebUnlock}
+                  disabled={zteBusy}
+                  className="w-full text-xs px-3 py-2 rounded-lg bg-neon-purple/15 text-neon-purple border border-neon-purple/40 hover:bg-neon-purple/25 transition-all disabled:opacity-40"
+                >
+                  {zteBusy ? 'Working (may take ~10s)...' : 'Read Status & Unlock'}
+                </button>
+
+                {zteError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+                    <p className="text-[11px] text-red-400">{zteError}</p>
+                  </div>
+                )}
+
+                {zteResult && (
+                  <div className="bg-black/40 border border-white/5 rounded-lg p-2.5 max-h-52 overflow-y-auto custom-scrollbar">
+                    {zteResult.compatBlocked ? (
+                      <p className="text-[11px] text-red-400 mb-1.5">{zteResult.message}</p>
+                    ) : (
+                      <p className={`text-[11px] mb-1.5 ${zteResult.unlocked === true ? 'text-neon-green' : zteResult.unlocked === false ? 'text-amber-400' : 'text-white/50'}`}>
+                        {zteResult.message}
+                      </p>
+                    )}
+                    {zteResult.warning && (
+                      <p className="text-[11px] text-amber-400 mb-1.5">{zteResult.warning}</p>
+                    )}
+                    {(zteResult.imei || zteResult.nckAttempts) && (
+                      <div className="text-[10px] font-mono text-white/40 mb-1.5">
+                        {zteResult.imei && `IMEI: ${zteResult.imei}  `}
+                        {zteResult.nckAttempts && `NCK attempts left: ${zteResult.nckAttempts}`}
+                      </div>
+                    )}
+                    {zteResult.steps.map((step, i) => (
+                      <div key={i} className="mb-1.5 last:mb-0">
+                        <div className="flex items-center gap-2">
+                          <span className={step.ok ? 'text-neon-green' : 'text-red-400'}>
+                            {step.ok ? '✓' : '✗'}
+                          </span>
+                          <span className="text-[11px] text-white/70">{step.label}</span>
+                        </div>
                         {step.output && (
                           <div className="text-[10px] text-white/40 font-mono pl-5 whitespace-pre-wrap">{step.output}</div>
                         )}

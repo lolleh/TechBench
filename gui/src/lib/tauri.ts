@@ -177,6 +177,63 @@ export const tauri = {
     }
     return empty
   },
+  zteWebUnlock: async (opts: {
+    interface?: string
+    gateway?: string
+    password?: string
+    code?: string
+    imei?: string
+  }): Promise<{
+    success: boolean
+    error: string
+    message: string
+    unlocked: boolean | null
+    imei: string
+    nckAttempts: string
+    base: string
+    interface: string
+    unlockResponse: Record<string, unknown> | null
+    steps: Array<{ label: string; ok: boolean; output: string }>
+    warning: string
+    autoComputed: boolean
+    compatBlocked: boolean
+  }> => {
+    const empty = {
+      success: false, error: 'Unable to reach TechBench server', message: '',
+      unlocked: null, imei: '', nckAttempts: '', base: '', interface: '',
+      unlockResponse: null, steps: [], warning: '', autoComputed: false,
+      compatBlocked: false,
+    }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/modems/zte/web-unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        return {
+          success: data.success ?? false,
+          error: data.error ?? '',
+          message: data.message ?? '',
+          unlocked: data.unlocked ?? null,
+          imei: data.imei ?? '',
+          nckAttempts: data.nckAttempts ?? '',
+          base: data.base ?? '',
+          interface: data.interface ?? '',
+          unlockResponse: data.unlockResponse ?? null,
+          steps: data.steps ?? [],
+          warning: data.warning ?? '',
+          autoComputed: data.autoComputed ?? false,
+          compatBlocked: data.compatBlocked ?? false,
+        }
+      }
+    } catch {
+      // API not available
+    }
+    return empty
+  },
   fetchIosApps: async (): Promise<{ available: boolean; apps: Array<{ id: string; packageName: string; appName: string; version: string; isSystem: boolean }>; error: string }> => {
     if (API_BASE) {
       try {

@@ -525,12 +525,25 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._handle_mdm()
         elif self.path.startswith("/api/modems/at"):
             self._handle_modem_at()
+        elif self.path.startswith("/api/modems/zte/web-unlock"):
+            self._handle_modem_zte_web_unlock()
         elif self.path.startswith("/api/modems/unlock"):
             self._handle_modem_unlock()
         elif self.path.startswith("/api/update"):
             self._handle_update()
         else:
             self.send_error(404)
+
+    def do_OPTIONS(self):
+        # CORS preflight: the webview sends an OPTIONS request before
+        # cross-origin JSON POSTs (Content-Type: application/json).
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def _send_json(self, data):
         body = json.dumps(data).encode()
@@ -1060,6 +1073,34 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                         + (" If the lock state looks wrong, confirm the vendor above is correct."
                            if vendor == "generic" else "")),
         })
+
+    def _handle_modem_zte_web_unlock(self):
+        """ZTE ZX297520V3 MiFi web unlock via the goform API.
+
+        These devices (MF927U / MF927TU / Hisense H220m...) expose no AT port
+        in HiLink mode, so the NCK is submitted through the web UI instead.
+        The code can be computed locally from the IMEI (transform-map
+        algorithm) or supplied directly.
+        """
+        payload = {}
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            pass
+        iface = (payload.get("interface") or "").strip() or None
+        gateway = (payload.get("gateway") or "").strip() or None
+        password = payload.get("password") or "admin"
+        code = (payload.get("code") or "").strip() or None
+        imei = (payload.get("imei") or "").strip() or None
+
+        # Note: the device's own IMEI is authoritative for auto-computation
+        # (the supplied one is only a fallback if the device read fails), so
+        # the ZX297520V3-algorithm warning is applied consistently.
+        result = _zte_web_unlock(iface=iface, gateway=gateway,
+                                 password=password, code=code, imei=imei)
+        if imei and "imei" not in result:
+            result["imei"] = imei
+        self._send_json(result)
 
     def _read_body(self):
         """Read the raw request body"""
@@ -3907,6 +3948,376 @@ def _modem_unlock_catalog():
     }
 
 
+# ---------------------------------------------------------------------------
+# ZTE ZX297520V3 (MF927U / MF927TU / Hisense H220m family) web unlock support.
+#
+# These "HiLink"-style MiFi devices expose no AT port over USB; the carrier
+# (NCK) unlock is driven through their goform web API instead. The NCK is
+# generated on-device from the IMEI by a fixed transform map (reverse-engineered
+# from ZTE ZX297520V3 firmware):
+#
+#   for i in 0..7:  code[i] = sum(transform(imei[j]) for j in i..i+7) % 10
+#
+# The transform map below is the one extracted from ZX297520V3 firmware
+# (kozik47/zte-imei-unlock). A given transform map produces one of two
+# equivalent variants (+5 mod 10 per entry) that yield identical codes.
+# ---------------------------------------------------------------------------
+
+_ZTE_ZX297520V3_TRANSFORM = {0: 1, 1: 3, 2: 5, 3: 7, 4: 9, 5: 0, 6: 2, 7: 4, 8: 6, 9: 8}
+
+
+def _zte_zx297520v3_unlock_code(imei):
+    """Compute the ZTE ZX297520V3 NCK from an IMEI (8 digits)."""
+    if not imei:
+        return None
+    digits = [int(c) if c.isdigit() else 0 for c in str(imei)[:15]]
+    if len(digits) < 15:
+        return None
+    transformed = [_ZTE_ZX297520V3_TRANSFORM.get(d, 0) for d in digits]
+    return "".join(str(sum(transformed[i:i + 8]) % 10) for i in range(8))
+
+
+def _find_zte_usb_interface():
+    """Find the Linux network interface backed by a ZTE USB modem (VID 19D2)."""
+    try:
+        netdir = Path("/sys/class/net")
+        for iface in sorted(netdir.iterdir()):
+            dev = iface / "device"
+            if not dev.exists():
+                continue
+            cur = Path(os.path.realpath(dev))
+            while str(cur).startswith("/sys"):
+                vid_file = cur / "idVendor"
+                if vid_file.exists():
+                    try:
+                        if vid_file.read_text().strip().upper() == "19D2":
+                            return iface.name
+                    except Exception:
+                        pass
+                    break
+                cur = cur.parent
+    except Exception:
+        pass
+    return None
+
+
+def _zte_web_device_info(iface=None):
+    """Return the ZTE web UI base URL + reachable interface for a connected device."""
+    iface = iface or _find_zte_usb_interface()
+    if not iface:
+        return None, None
+    try:
+        out = subprocess.run(
+            ["ip", "-4", "route", "show", "dev", iface],
+            capture_output=True, text=True, timeout=5,
+        ).stdout or ""
+        gateway = None
+        for line in out.splitlines():
+            m = re.search(r"default via (\S+)", line)
+            if m:
+                gateway = m.group(1)
+        if not gateway:
+            m = re.search(r"^(\S+)/\d+", out.splitlines()[0] if out.splitlines() else "")
+            if m:
+                # No default route; gateway is typically x.x.x.1 of the subnet
+                base = m.group(1).rsplit(".", 1)[0]
+                gateway = f"{base}.1"
+    except Exception:
+        gateway = "192.168.0.1"
+    return f"http://{gateway or '192.168.0.1'}", iface
+
+
+def _zte_web_compat_verified(sim, state, identity):
+    """Return True when the device's goform reads match the ZX297520V3 UI.
+
+    The ZX297520V3 unlock algorithm is only verified for that platform. The
+    MF283U-class ZTE CPEs share the goform login/RD framework, but their
+    SIM/lock-state reads come back empty and unknown multi-commands are
+    echoed back literally. Such devices must never be auto-unlocked: every
+    computed code is wrong and burns NCK attempts.
+    """
+    for d in (sim, state, identity):
+        for value in (d or {}).values():
+            if isinstance(value, str) and value.strip():
+                return True
+            if isinstance(value, (int, float)) and value:
+                return True
+    return False
+
+
+def _zte_goform_get(base, iface, cmd, cookie_jar):
+    """GET a goform command. Returns parsed JSON dict or None."""
+    if "," in cmd:
+        # Comma-separated reads need multi_data=1 or the device echoes the
+        # whole string back as a single key.
+        url = f"{base}/goform/goform_get_cmd_process?cmd={cmd}&multi_data=1"
+    else:
+        url = f"{base}/goform/goform_get_cmd_process?cmd={cmd}"
+    cmdline = ["curl", "-s", "--interface", iface, "-m", "8",
+               "-A", "Mozilla/5.0", "-H", f"Referer: {base}/index.html",
+               "-b", cookie_jar, "-c", cookie_jar, url]
+    try:
+        out = subprocess.run(cmdline, capture_output=True, text=True, timeout=15).stdout
+    except Exception:
+        return None
+    try:
+        return json.loads(out or "{}")
+    except Exception:
+        return {}
+
+
+def _zte_goform_post(base, iface, fields, cookie_jar):
+    """POST a goform set command. Returns parsed JSON dict or None."""
+    cmdline = ["curl", "-s", "--interface", iface, "-m", "8",
+               "-A", "Mozilla/5.0", "-H", f"Referer: {base}/index.html",
+               "-b", cookie_jar, "-c", cookie_jar,
+               "-X", "POST", f"{base}/goform/goform_set_cmd_process"]
+    for key, value in fields.items():
+        cmdline += ["--data-urlencode", f"{key}={value}"]
+    try:
+        out = subprocess.run(cmdline, capture_output=True, text=True, timeout=15).stdout
+    except Exception:
+        return None
+    try:
+        return json.loads(out or "{}")
+    except Exception:
+        return {}
+
+
+def _zte_web_read_imei():
+    """Best-effort IMEI read for a connected ZTE web-UI (HiLink) device.
+
+    The goform 'imei' command is served without authentication on these
+    devices, so this works even before a web login. Returns the IMEI string
+    or None.
+    """
+    try:
+        base, iface = _zte_web_device_info()
+        if not base or not iface:
+            return None
+        jar = os.path.join(tempfile.gettempdir(), f"techbench-zte-imei-{os.getpid()}.cookies")
+        try:
+            imei = (_zte_goform_get(base, iface, "imei", jar) or {}).get("imei") or ""
+            return imei.strip() or None
+        finally:
+            if os.path.exists(jar):
+                try:
+                    os.remove(jar)
+                except Exception:
+                    pass
+    except Exception:
+        return None
+
+
+def _zte_web_unlock(iface=None, gateway=None, password="admin", code=None, imei=None):
+    """Full ZTE goform unlock flow for ZX297520V3 MiFi devices.
+
+    `imei` is a fallback used only when the device's own IMEI cannot be read.
+    Returns a dict with steps, status info, and (optionally) the unlock result.
+    """
+    base, resolved_iface = _zte_web_device_info(iface)
+    if gateway:
+        base = f"http://{gateway}"
+    if not base or not resolved_iface:
+        return {
+            "success": False,
+            "steps": [{"label": "Detect ZTE USB network interface",
+                       "ok": False,
+                       "output": "No ZTE (VID 19D2) USB network interface found. "
+                                 "Connect the device over USB and retry."}],
+        }
+
+    import tempfile as _tf
+    cookie_jar = os.path.join(_tf.gettempdir(), f"techbench-zte-{os.getpid()}.cookies")
+    if os.path.exists(cookie_jar):
+        try:
+            os.remove(cookie_jar)
+        except Exception:
+            pass
+    try:
+        steps = []
+        # 1) Prime the goform session: load the web UI + JS first, then RD.
+        #    Without these GETs the device does not issue a usable RD/login session.
+        for probe in ("/index.html", "/js/main.js", "/"):
+            try:
+                subprocess.run(
+                    ["curl", "-s", "--interface", resolved_iface, "-m", "8",
+                     "-A", "Mozilla/5.0", "-b", cookie_jar, "-c", cookie_jar,
+                     f"{base}{probe}"],
+                    capture_output=True, text=True, timeout=15,
+                )
+            except Exception:
+                pass
+        prime = _zte_goform_get(base, resolved_iface, "RD", cookie_jar)
+        steps.append({"label": "Prime goform session (RD)",
+                      "ok": prime is not None, "output": json.dumps(prime or {})})
+        # 2) Login (password is Base64 when PASSWORD_ENCODE is on - default firmware)
+        import base64 as _b64
+        encoded = _b64.b64encode(password.encode()).decode()
+        login = _zte_goform_post(base, resolved_iface, {
+            "isTest": "zte_web_ui_is_test",
+            "goformId": "LOGIN",
+            "password": encoded,
+        }, cookie_jar)
+        logged_in = bool(login and login.get("result") == "0")
+        steps.append({"label": f"Login to web UI (admin password)",
+                      "ok": logged_in,
+                      "output": json.dumps(login or {})})
+        if not logged_in:
+            return {"success": False, "base": base, "interface": resolved_iface,
+                    "steps": steps,
+                    "error": "Web login failed. The admin password may have been "
+                             "changed - supply it via the password field."}
+
+        # 3) Read device firmware/version info (best-effort)
+        identity = _zte_goform_get(base, resolved_iface,
+                                   "cr_version,wa_version,hardware_version,"
+                                   "web_version,wa_inner_version", cookie_jar) or {}
+        ident_parts = {k: v for k, v in identity.items() if v}
+        steps.append({"label": "Read device firmware/version info",
+                      "ok": bool(ident_parts),
+                      "output": json.dumps(ident_parts) if ident_parts
+                                else "no version info exposed by this device"})
+
+        # 4) Read lock state + IMEI. Individual commands: some firmwares
+        #    (MF283U-class CPEs) do not honour multi_data=1 and echo a comma
+        #    list back as a single literal key.
+        sim = _zte_goform_get(base, resolved_iface, "sim_status", cookie_jar) or {}
+        time_left = _zte_goform_get(base, resolved_iface, "unlock_nck_time", cookie_jar) or {}
+        imei = _zte_goform_get(base, resolved_iface, "imei", cookie_jar) or {}
+        state = {}
+        for cmd in ("modem_main_state", "pinnumber", "puknumber", "pin_status"):
+            part = _zte_goform_get(base, resolved_iface, cmd, cookie_jar) or {}
+            if isinstance(part, dict):
+                state.update(part)
+        imei_val = (imei.get("imei") or "").strip() or None
+        attempts = (time_left.get("unlock_nck_time") or "").strip()
+        steps.append({"label": "Read SIM lock state + IMEI",
+                      "ok": True,
+                      "output": json.dumps({**state, **sim, "unlock_nck_time": attempts,
+                                            "imei": imei_val})})
+
+        result = {
+            "success": True,
+            "base": base,
+            "interface": resolved_iface,
+            "steps": steps,
+            "simStatus": sim.get("sim_status") or (state.get("modem_main_state") or ""),
+            "nckAttempts": attempts,
+            "imei": imei_val,
+        }
+
+        if not code:
+            auto_computed = False
+            if not imei_val and imei:
+                imei_val = imei.strip() or None
+            if imei_val and not _zte_web_compat_verified(sim, state, identity):
+                # Not a verified ZX297520V3 (e.g. MF283U-class CPE): the
+                # transform-map algorithm does not apply. Block auto-compute -
+                # every computed code is wrong and burns NCK attempts.
+                result["success"] = False
+                result["compatBlocked"] = True
+                result["error"] = (
+                    "This device is not a verified ZX297520V3: its goform SIM and "
+                    "lock-state reads came back empty, which is typical of MF283U-class "
+                    "ZTE CPEs. The ZX297520V3 algorithm is NOT applicable here, so "
+                    "auto-computation was blocked to avoid burning NCK attempts. "
+                    "Obtain an NCK for IMEI {} from your carrier or an unlock service "
+                    "and enter it manually.").format(imei_val)
+                steps.append({"label": "ZX297520V3 compatibility check",
+                              "ok": False,
+                              "output": ("Device fingerprint does not match a ZX297520V3 "
+                                         "(empty SIM/lock-state reads). Auto-computation "
+                                         "blocked.")})
+                result["message"] = result["error"]
+                return result
+            if imei_val:
+                code = _zte_zx297520v3_unlock_code(imei_val)
+                if code:
+                    auto_computed = True
+                    steps.append({"label": "Compute NCK from IMEI (ZX297520V3)",
+                                  "ok": True, "output": code})
+            if not code:
+                result["error"] = ("No IMEI read from the device and no code supplied. "
+                                   "Provide an unlock code or an IMEI to compute one.")
+                return result
+            if auto_computed:
+                result["autoComputed"] = True
+                warning = (
+                    "The code was auto-computed using the ZX297520V3 transform-map "
+                    "algorithm. That algorithm only matches ZX297520V3 devices "
+                    "(MF927U/TU, Hisense H220m, ...). If this is a different ZTE model "
+                    "(e.g. MF823, MF667), the code is WRONG and each attempt burns the "
+                    "remaining NCK counter ({} left). Verify the model in the device info "
+                    "step above, or supply a code from your carrier.").format(attempts or "?")
+                result["warning"] = warning
+                result["message"] = ("NCK computed with the ZX297520V3 algorithm - verify "
+                                     "the device model before relying on the result.")
+                steps.append({"label": "Algorithm applicability check",
+                              "ok": True,
+                              "output": ("ZX297520V3 transform map assumed. Only ZX297520V3 "
+                                         "devices (MF927U/TU, H220m, ...) match this "
+                                         "algorithm; other ZTE models will reject the code.")})
+
+        # 5) Submit the unlock code
+        submit = _zte_goform_post(base, resolved_iface, {
+            "isTest": "zte_web_ui_is_test",
+            "goformId": "UNLOCK_NETWORK",
+            "notCallback": "true",
+            "unlock_network_code": code,
+        }, cookie_jar)
+        result["unlockResponse"] = submit or {}
+        ok_submit = bool(submit and submit.get("result") == "success")
+        steps.append({"label": f"Submit unlock code {code} (UNLOCK_NETWORK)",
+                      "ok": ok_submit, "output": json.dumps(submit or {})})
+
+        # 6) Re-read state to confirm
+        time.sleep(1.0)
+        sim2 = _zte_goform_get(base, resolved_iface, "sim_status", cookie_jar) or {}
+        state2 = {}
+        for cmd in ("modem_main_state", "pinnumber", "puknumber", "pin_status"):
+            part = _zte_goform_get(base, resolved_iface, cmd, cookie_jar) or {}
+            if isinstance(part, dict):
+                state2.update(part)
+        result["afterStatus"] = {**state2, **sim2}
+        result["nckAttempts"] = ((_zte_goform_get(base, resolved_iface,
+                                                  "unlock_nck_time", cookie_jar) or {})
+                                 .get("unlock_nck_time") or attempts)
+        steps.append({"label": "Confirm lock state after unlock",
+                      "ok": True,
+                      "output": json.dumps(result["afterStatus"])})
+
+        modem_state = (result["afterStatus"].get("modem_main_state") or "").lower()
+        result["unlocked"] = ("waitnck" not in modem_state
+                              and "waitpin" not in modem_state
+                              and "waitpuk" not in modem_state
+                              and ok_submit)
+        if result["unlocked"]:
+            result["message"] = "Device unlocked. SIM lock state no longer shows a pending code."
+        elif ok_submit:
+            result["message"] = ("Unlock code was accepted, but the SIM still reports a lock "
+                                 "state. This can happen when the code is wrong or when the "
+                                 "SIM itself (not the device) is PIN/PUK locked.")
+        else:
+            result["message"] = ("The device rejected the unlock code. Check the code and "
+                                 "remaining attempts.")
+            if result.get("autoComputed"):
+                result["message"] += (" The code was computed with the ZX297520V3 algorithm; "
+                                      "if this device is not a ZX297520V3 (see the device "
+                                      "info step), that explains the rejection.")
+        return result
+    except Exception as exc:
+        return {"success": False, "steps": [{"label": "ZTE web unlock",
+                                             "ok": False, "output": str(exc)}],
+                "error": str(exc)}
+    finally:
+        try:
+            if os.path.exists(cookie_jar):
+                os.remove(cookie_jar)
+        except Exception:
+            pass
+
+
 class DevicePoller:
     """Background thread that polls for devices and caches their state.
 
@@ -4386,6 +4797,23 @@ class DevicePoller:
         }
 
     # ------------------------------------------------------------------
+    def _zte_web_imei_cached(self):
+        """Cached IMEI probe for a connected ZTE web-UI device.
+
+        Throttled to the modem probe interval so the poll loop does not hit
+        the device's goform API on every cycle.
+        """
+        now = time.time()
+        seen = self._modem_seen.get("zte-web-imei")
+        if seen:
+            ttl = self._modem_probe_interval if seen.get("imei") else 15.0
+            if now - seen.get("probed_at", 0) < ttl:
+                return seen.get("imei")
+        imei = _zte_web_read_imei()
+        self._modem_seen["zte-web-imei"] = {"imei": imei, "probed_at": now}
+        return imei
+
+    # ------------------------------------------------------------------
     def _poll_modems_usb_known(self, existing=None):
         """Fallback: report modems by USB VID alone (no MM/AT access)."""
         results = []
@@ -4410,7 +4838,7 @@ class DevicePoller:
                 continue
             seen_ids.add(key)
             brand = _MODEM_VID_BRAND[vid.upper()]
-            results.append({
+            entry = {
                 "id": f"modem-usb-{key}",
                 "serial": "",
                 "state": "connected",
@@ -4423,7 +4851,16 @@ class DevicePoller:
                 "deviceType": "modem",
                 "chipset": _MODEM_CHIPSET_BY_VID.get(vid.upper(), ""),
                 "bootMode": "normal",
-            })
+            }
+            if vid.upper() == "19D2":
+                # ZTE web-UI (HiLink) devices expose no AT port; read the IMEI
+                # via the goform API (no login required) so the list/detail
+                # cards show it instead of N/A.
+                imei = self._zte_web_imei_cached()
+                if imei:
+                    entry["imei"] = imei
+                    entry["serial"] = imei
+            results.append(entry)
         return results
 
     # ------------------------------------------------------------------
