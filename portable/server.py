@@ -525,6 +525,8 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
             self._handle_mdm()
         elif self.path.startswith("/api/modems/at"):
             self._handle_modem_at()
+        elif self.path.startswith("/api/modems/zte/reboot"):
+            self._handle_modem_zte_reboot()
         elif self.path.startswith("/api/modems/zte/web-unlock"):
             self._handle_modem_zte_web_unlock()
         elif self.path.startswith("/api/modems/unlock"):
@@ -1100,6 +1102,23 @@ class TechBenchHandler(SimpleHTTPRequestHandler):
                                  password=password, code=code, imei=imei)
         if imei and "imei" not in result:
             result["imei"] = imei
+        self._send_json(result)
+
+    def _handle_modem_zte_reboot(self):
+        """Reboot a ZTE web-UI device and re-check the NCK attempt counter.
+
+        On many ZTE CPEs the NCK counter is restored by a reboot, so this
+        reverses attempts burned by wrong codes without risking a permanent
+        lock.
+        """
+        payload = {}
+        try:
+            payload = json.loads(self._read_body() or b"{}")
+        except Exception:
+            pass
+        iface = (payload.get("interface") or "").strip() or None
+        gateway = (payload.get("gateway") or "").strip() or None
+        result = _zte_web_reboot_and_check_counter(iface=iface, gateway=gateway)
         self._send_json(result)
 
     def _read_body(self):
@@ -4316,6 +4335,140 @@ def _zte_web_unlock(iface=None, gateway=None, password="admin", code=None, imei=
                 os.remove(cookie_jar)
         except Exception:
             pass
+
+
+def _zte_web_reboot_and_check_counter(iface=None, gateway=None, timeout=90):
+    """Reboot a ZTE web-UI device and re-read the NCK attempt counter.
+
+    On many ZTE CPEs the NCK attempt counter lives in RAM-backed NVM and is
+    restored by a power-cycle (reboot), so a wrong code that consumed attempts
+    stops being a permanent-lock risk. This is safe and reversible - the
+    equivalent of unplugging the device.
+
+    Returns a dict with steps, counterBefore / counterAfter / counterReset.
+    """
+    base, resolved_iface = _zte_web_device_info(iface)
+    if gateway:
+        base = f"http://{gateway}"
+    steps = []
+    result = {"success": False, "base": base,
+              "interface": resolved_iface, "steps": steps}
+    if not base or not resolved_iface:
+        result["error"] = "No ZTE web-UI device found."
+        return result
+
+    jar = os.path.join(tempfile.gettempdir(), f"techbench-zte-rb-{os.getpid()}.cookies")
+
+    def _read_counter():
+        time_left = _zte_goform_get(base, resolved_iface, "unlock_nck_time", jar) or {}
+        return (time_left.get("unlock_nck_time") or "").strip()
+
+    def _device_up():
+        try:
+            code = subprocess.run(
+                ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+                 "--interface", resolved_iface, "-m", "5",
+                 "-A", "Mozilla/5.0", f"{base}/index.html"],
+                capture_output=True, text=True, timeout=8,
+            ).stdout.strip()
+            return code in ("200", "302", "301", "404")
+        except Exception:
+            return False
+
+    try:
+        before = _read_counter()
+        steps.append({"label": "Read NCK counter before reboot",
+                      "ok": bool(before), "output": before or "n/a"})
+
+        # Best-effort reboot via the goform set API. The response is not
+        # reliable JSON, so we accept any non-empty reply as "command taken".
+        accepted = False
+        attempts = (
+            {"isTest": "zte_web_ui_is_test", "goformId": "REBOOT",
+             "notCallback": "true"},
+            {"isTest": "zte_web_ui_is_test", "goformId": "REBOOT_MODE",
+             "notCallback": "true", "mode": "reboot"},
+            {"goformId": "REBOOT", "notCallback": "true"},
+        )
+        for fields in attempts:
+            try:
+                out = subprocess.run(
+                    ["curl", "-s", "--interface", resolved_iface, "-m", "8",
+                     "-A", "Mozilla/5.0",
+                     "-H", f"Referer: {base}/index.html",
+                     "-b", jar, "-c", jar,
+                     "-X", "POST", f"{base}/goform/goform_set_cmd_process"]
+                    + [item for k, v in fields.items()
+                       for item in ("--data-urlencode", f"{k}={v}")],
+                    capture_output=True, text=True, timeout=15,
+                ).stdout.strip()
+                if out:
+                    accepted = True
+                    break
+            except Exception:
+                continue
+        if not accepted:
+            try:
+                out = subprocess.run(
+                    ["curl", "-s", "--interface", resolved_iface, "-m", "8",
+                     "-A", "Mozilla/5.0",
+                     "-H", f"Referer: {base}/index.html",
+                     "-b", jar, "-c", jar,
+                     f"{base}/goform/goform_get_cmd_process?cmd=REBOOT&notCallback=true"],
+                    capture_output=True, text=True, timeout=15,
+                ).stdout.strip()
+                accepted = bool(out)
+            except Exception:
+                accepted = False
+        steps.append({"label": "Trigger device reboot",
+                      "ok": accepted,
+                      "output": "goform REBOOT issued" if accepted
+                                else "no reboot command accepted"})
+        if not accepted:
+            result["error"] = ("The device did not accept a reboot command. "
+                               "Power-cycle it manually (unplug / power off, "
+                               "wait 10s, power on) and re-run.")
+            return result
+
+        # Wait for the device to drop then come back (or just come back for
+        # devices that reboot faster than we can poll).
+        deadline = time.time() + timeout
+        saw_down = False
+        while time.time() < deadline:
+            if not _device_up():
+                saw_down = True
+                break
+            time.sleep(1)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if _device_up():
+                break
+            time.sleep(1)
+        time.sleep(3)
+        steps.append({"label": "Wait for device to come back",
+                      "ok": True,
+                      "output": "device reachable after reboot" if _device_up()
+                                else "device not reachable yet"})
+
+        after = _read_counter()
+        steps.append({"label": "Read NCK counter after reboot",
+                      "ok": bool(after), "output": after or "n/a"})
+        result["counterBefore"] = before
+        result["counterAfter"] = after
+        result["counterReset"] = bool(after) and after != before
+        result["rebooted"] = True
+        result["success"] = True
+        result["message"] = ("NCK counter before: {} / after: {}. {}").format(
+            before or "n/a", after or "n/a",
+            ("Attempts were restored." if result["counterReset"]
+             else "The counter did not change (this firmware keeps it in NVM)."))
+    finally:
+        try:
+            if os.path.exists(jar):
+                os.remove(jar)
+        except Exception:
+            pass
+    return result
 
 
 class DevicePoller:
