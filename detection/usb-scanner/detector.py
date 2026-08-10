@@ -157,8 +157,8 @@ class ChipsetDatabase:
             },
             "04e8:6860": {
                 "vendor": "samsung", "chipset": "exynos",
-                "name": "Samsung Download Mode", "boot_modes": ["odin", "normal"],
-                "tools": ["heimdall", "odin"], "container": "samsung-odin",
+                "name": "Samsung Galaxy (MTP)", "boot_modes": ["normal"],
+                "tools": ["adb"], "container": "android-tools",
             },
             "05ac:1227": {
                 "vendor": "apple", "chipset": "a-series",

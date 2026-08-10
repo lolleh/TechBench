@@ -463,7 +463,7 @@ Used for: Samsung firmware flashing via Odin
 2. Hold **Volume Down + Power + Home/Bixby** simultaneously
 3. Release when warning screen appears
 4. Press **Volume Up** to confirm
-5. Device connects as `04e8:6860`
+5. Device connects in Odin download mode
 
 ### DFU Mode (Apple)
 
@@ -484,7 +484,7 @@ TechBench automatically detects the device mode based on the USB VID:PID:
 |---------|------|--------|
 | `05c6:90db` | EDL | Qualcomm devices |
 | `0e8d:0003` | Preloader | MediaTek devices |
-| `04e8:6860` | Download | Samsung devices |
+| `04e8:6860` | MTP / normal | Samsung Galaxy (ADB) |
 | `05ac:1227` | DFU | Apple devices |
 | `18d1:4ee7` | Fastboot | Google Pixel |
 | `2717:ff48` | Fastboot | Xiaomi devices |

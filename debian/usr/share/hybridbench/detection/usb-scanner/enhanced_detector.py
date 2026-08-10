@@ -192,15 +192,15 @@ class ChipsetDatabase:
             "04e8:6860": {
                 "vendor": "samsung",
                 "chipset": "exynos",
-                "name": "Samsung Download Mode",
-                "description": "Samsung Odin download mode",
-                "boot_modes": ["download"],
-                "tools": ["heimdall", "odin"],
-                "container": "samsung-odin",
+                "name": "Samsung Galaxy (MTP)",
+                "description": "Samsung Galaxy in MTP (normal boot) mode",
+                "boot_modes": ["normal"],
+                "tools": ["adb"],
+                "container": "android-tools",
                 "capabilities": {
-                    "can_flash": True,
+                    "can_flash": False,
                     "can_read_info": True,
-                    "supported_protocols": ["odin"]
+                    "supported_protocols": ["adb", "mtp"]
                 }
             },
             "05ac:1227": {

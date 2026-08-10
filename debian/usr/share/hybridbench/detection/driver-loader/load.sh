@@ -28,7 +28,7 @@ Arguments:
 Examples:
     $0 05c6 90db    # Load Qualcomm EDL drivers
     $0 0e8d 0003    # Load MediaTek preloader drivers
-    $0 04e8 6860    # Load Samsung download mode drivers
+    $0 04e8 6860    # Load Samsung Galaxy MTP/ADB drivers
 
 EOF
     exit 0
@@ -60,8 +60,8 @@ case "${VENDOR_ID}:${PRODUCT_ID}" in
         MODULES="$BASE_MODULES"
         ;;
     "04e8:6860")
-        # Samsung download mode
-        log "Detected Samsung download mode"
+        # Samsung Galaxy MTP/ADB
+        log "Detected Samsung Galaxy MTP/ADB"
         MODULES="$BASE_MODULES"
         ;;
     "05ac:1227"|"05ac:1281"|"05ac:1222")

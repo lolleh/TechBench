@@ -29,7 +29,7 @@ def test_chipset_database():
     test_cases = [
         ("05c6", "90db", "Qualcomm EDL"),
         ("0e8d", "0003", "MediaTek Preloader"),
-        ("04e8", "6860", "Samsung Download"),
+        ("04e8", "6860", "Samsung Galaxy (MTP)"),
         ("05ac", "1227", "Apple DFU"),
         ("18d1", "4ee7", "Google Pixel Fastboot"),
         ("2717", "ff48", "Xiaomi Fastboot"),

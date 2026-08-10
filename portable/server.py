@@ -3524,6 +3524,7 @@ _MODEM_VID_BRAND = {
     "02FF": "Netgear",
     "1782": "Spreadtrum",
     "0E8D": "MediaTek",
+    "04E8": "Samsung",
 }
 
 _MODEM_CHIPSET_BY_VID = {
@@ -3539,6 +3540,7 @@ _MODEM_CHIPSET_BY_VID = {
     "2CB7": "Fibocom",
     "1546": "u-blox",
     "1199": "Qualcomm",
+    "04E8": "Exynos",
 }
 
 # Well-known MiFi hotspot admin hosts (Huawei/ZTE dongles default to 192.168.8.1).
@@ -3575,6 +3577,44 @@ def _list_modem_serial_ports():
         return []
     import glob
     return sorted(glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*"))
+
+
+def _clean_usb_name(raw):
+    """Strip the 'Bus XXX Device YYY: ID VVVV:PPPP' prefix from an lsusb line."""
+    name = (raw or "").strip()
+    m = re.search(r"ID\s+[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\s+(.+)$", name)
+    return m.group(1).strip() if m else name
+
+
+def _port_to_usb_vidpid(port):
+    """Resolve a serial port to its owning USB device VID/PID via Linux sysfs.
+
+    Serial interfaces exposed by phones/modem-AT gadgets hang off a USB device
+    node that exposes idVendor/idProduct. This lets us attribute a port (e.g.
+    /dev/ttyACM0 from a Samsung in MTP mode) to the right USB device even when
+    the device blocks the AT identity commands.
+    """
+    if platform.system() != "Linux" or not port:
+        return "", ""
+    name = os.path.basename(port)
+    if not name or not name.startswith("tty"):
+        return "", ""
+    try:
+        node = os.path.realpath(f"/sys/class/tty/{name}/device")
+    except Exception:
+        return "", ""
+    while node and node != "/":
+        try:
+            with open(os.path.join(node, "idVendor")) as f:
+                vid = f.read().strip()
+            with open(os.path.join(node, "idProduct")) as f:
+                pid = f.read().strip()
+            if vid:
+                return vid.upper(), pid.upper()
+        except OSError:
+            pass
+        node = os.path.dirname(node)
+    return "", ""
 
 
 def _at_exchange(ser, cmd, timeout=1.5):
@@ -4734,6 +4774,11 @@ class DevicePoller:
                 except (ValueError, IndexError):
                     pass
             if not vid or not pid:
+                # Linux lsusb format: "Bus 001 Device 035: ID 04e8:6860 Samsung ..."
+                m = re.search(r"ID\s+([0-9a-fA-F]{4}):([0-9a-fA-F]{4})", did)
+                if m:
+                    vid, pid = m.group(1).upper(), m.group(2).upper()
+            if not vid or not pid:
                 continue
 
             # Skip if already detected by ADB/fastboot/Apple
@@ -4766,6 +4811,7 @@ class DevicePoller:
             mode = mode_info.get("mode", "normal")
             device_type = mode_info.get("deviceType", "generic")
             label = mode_info.get("label", f"{brand} Device")
+            boot_mode = mode if mode not in ("adb", "usb") else "normal"
 
             results.append({
                 "id": f"{device_type}-{vid}:{pid}-{serial or label}",
@@ -4779,7 +4825,7 @@ class DevicePoller:
                 "deviceType": device_type,
                 "androidVersion": "",
                 "chipset": "",
-                "bootMode": mode,
+                "bootMode": boot_mode,
             })
 
         return results
@@ -4929,6 +4975,13 @@ class DevicePoller:
 
         product_name = model or manufacturer or "AT Cellular Modem"
         vid, pid = self._match_usb_vidpid(manufacturer, product_name)
+        if not vid:
+            vid, pid = _port_to_usb_vidpid(port)
+        brand = manufacturer or _MODEM_VID_BRAND.get(
+            vid.upper(), USB_VID_BRAND.get(vid.upper(), "")
+        )
+        if not manufacturer and not model and brand and vid:
+            product_name = f"{brand} Cellular Modem"
 
         return {
             "id": f"modem-at-{port.replace('/dev/', '').replace('/', '-')}",
@@ -4939,7 +4992,7 @@ class DevicePoller:
             "port": port,
             "vendorId": vid or "",
             "productId": pid or "",
-            "vendorName": manufacturer or _MODEM_VID_BRAND.get(vid.upper(), "Unknown"),
+            "vendorName": brand or "Unknown",
             "productName": product_name,
             "deviceType": "modem",
             "chipset": _MODEM_CHIPSET_BY_VID.get(vid.upper(), ""),
@@ -5000,7 +5053,7 @@ class DevicePoller:
                 "vendorId": vid.upper(),
                 "productId": pid.upper(),
                 "vendorName": brand,
-                "productName": (entry.get("name") or "").split(" - ")[0] or f"{brand} Cellular Modem",
+                "productName": _clean_usb_name(entry.get("name")) or f"{brand} Cellular Modem",
                 "deviceType": "modem",
                 "chipset": _MODEM_CHIPSET_BY_VID.get(vid.upper(), ""),
                 "bootMode": "normal",
@@ -5291,7 +5344,7 @@ USB_MODE_DB = {
     ("0E8D", "2004"): {"mode": "fastboot", "brand": "MediaTek", "deviceType": "mediatek", "label": "MediaTek Fastboot"},
     ("0E8D", "2005"): {"mode": "fastboot", "brand": "MediaTek", "deviceType": "mediatek", "label": "MediaTek Fastboot"},
     # Samsung
-    ("04E8", "6860"): {"mode": "download", "brand": "Samsung", "deviceType": "samsung", "label": "Samsung Download Mode"},
+    ("04E8", "6860"): {"mode": "adb", "brand": "Samsung", "deviceType": "samsung", "label": "Samsung Galaxy (MTP)"},
     ("04E8", "6877"): {"mode": "download", "brand": "Samsung", "deviceType": "samsung", "label": "Samsung Download Mode"},
     ("04E8", "6866"): {"mode": "uart", "brand": "Samsung", "deviceType": "samsung", "label": "Samsung UART"},
     ("04E8", "6863"): {"mode": "modem", "brand": "Samsung", "deviceType": "samsung", "label": "Samsung Modem"},

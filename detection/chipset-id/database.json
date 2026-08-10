@@ -55,11 +55,11 @@
   "04e8:6860": {
     "vendor": "samsung",
     "chipset": "exynos",
-    "name": "Samsung Download Mode",
-    "description": "Samsung Odin download mode",
-    "boot_modes": ["odin", "normal"],
-    "tools": ["heimdall", "odin", "jfdownload"],
-    "container": "samsung-odin",
+    "name": "Samsung Galaxy (MTP)",
+    "description": "Samsung Galaxy in MTP (normal boot) mode",
+    "boot_modes": ["normal"],
+    "tools": ["adb"],
+    "container": "android-tools",
     "common_devices": [
       "Samsung Galaxy S series",
       "Samsung Galaxy Note series",

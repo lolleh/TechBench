@@ -89,7 +89,7 @@ echo.
 echo   Recommended drivers to install via Zadig:
 echo     - Qualcomm HS-USB QDLoader 9008 (VID:05C6 PID:9008)
 echo     - MediaTek USB VCOM (VID:0E8D PID:0003)
-echo     - Samsung Download Mode (VID:04E8 PID:6860)
+echo     - Samsung Galaxy MTP / ADB (VID:04E8 PID:6860)
 echo     - Apple DFU (VID:05AC PID:1227)
 echo     - Android ADB Interface (VID:18D1)
 echo     - FTDI FT2232H (for JTAG/SWD/I2C/SPI)

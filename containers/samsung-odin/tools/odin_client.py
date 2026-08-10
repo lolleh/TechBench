@@ -359,45 +359,42 @@ class OdinClient:
     """Samsung Odin protocol client"""
     
     SAMSUNG_VID = 0x04E8
-    DOWNLOAD_PID = 0x6860
-    VENDOR_PID = 0x685D
-    
+    # Samsung Odin download-mode USB PIDs (0x04E8 VID). 0x6860 is MTP (normal
+    # boot) mode and must NOT be treated as download mode - matching it would
+    # grab a normally-booted phone and fail the Odin handshake.
+    DOWNLOAD_PIDS = (0x685D, 0x6601, 0x68C3, 0x6877)
+    DOWNLOAD_PID = DOWNLOAD_PIDS[0]  # kept for compatibility
+
     def __init__(self, port: str = "/dev/ttyUSB0"):
         self.port = port
         self.device = None
         self.connected = False
         self.device_info = {}
         self.partitions = {}
-    
+
     def connect(self) -> bool:
         """Connect to Samsung device in download mode"""
         try:
             import usb.core
-            
-            # Try download mode
-            self.device = usb.core.find(
-                idVendor=self.SAMSUNG_VID,
-                idProduct=self.DOWNLOAD_PID
-            )
-            
-            if not self.device:
-                # Try vendor mode
-                self.device = usb.core.find(
-                    idVendor=self.SAMSUNG_VID,
-                    idProduct=self.VENDOR_PID
-                )
-            
+
+            self.device = None
+            for pid in self.DOWNLOAD_PIDS:
+                dev = usb.core.find(idVendor=self.SAMSUNG_VID, idProduct=pid)
+                if dev:
+                    self.device = dev
+                    break
+
             if self.device:
                 self.device.set_configuration()
                 self.connected = True
                 logger.info("Connected to Samsung device in download mode")
-                
+
                 # Perform handshake
                 return self.handshake()
-            
-            logger.error("No Samsung device found")
+
+            logger.error("No Samsung device in download mode found")
             return False
-            
+
         except Exception as e:
             logger.error(f"Connection failed: {e}")
             return False

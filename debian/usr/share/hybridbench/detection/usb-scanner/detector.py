@@ -90,9 +90,10 @@ class ChipsetDatabase:
             "04e8:6860": {
                 "vendor": "samsung",
                 "chipset": "exynos",
-                "name": "Samsung Download Mode",
-                "boot_modes": ["odin", "normal"],
-                "tools": ["heimdall", "odin"],
+                "name": "Samsung Galaxy (MTP)",
+                "boot_modes": ["normal"],
+                "tools": ["adb"],
+                "container": "android-tools",
                 "container": "samsung-odin"
             },
             "05ac:1227": {
