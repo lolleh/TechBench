@@ -234,6 +234,53 @@ export const tauri = {
     }
     return empty
   },
+  zteWebReboot: async (opts: {
+    interface?: string
+    gateway?: string
+  }): Promise<{
+    success: boolean
+    error: string
+    message: string
+    base: string
+    interface: string
+    counterBefore: string
+    counterAfter: string
+    counterReset: boolean
+    rebooted: boolean
+    steps: Array<{ label: string; ok: boolean; output: string }>
+  }> => {
+    const empty = {
+      success: false, error: 'Unable to reach TechBench server', message: '',
+      base: '', interface: '', counterBefore: '', counterAfter: '',
+      counterReset: false, rebooted: false, steps: [],
+    }
+    if (!API_BASE) return empty
+    try {
+      const response = await fetch(`${API_BASE}/api/modems/zte/reboot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        return {
+          success: data.success ?? false,
+          error: data.error ?? '',
+          message: data.message ?? '',
+          base: data.base ?? '',
+          interface: data.interface ?? '',
+          counterBefore: data.counterBefore ?? '',
+          counterAfter: data.counterAfter ?? '',
+          counterReset: data.counterReset ?? false,
+          rebooted: data.rebooted ?? false,
+          steps: data.steps ?? [],
+        }
+      }
+    } catch {
+      // API not available
+    }
+    return empty
+  },
   fetchIosApps: async (): Promise<{ available: boolean; apps: Array<{ id: string; packageName: string; appName: string; version: string; isSystem: boolean }>; error: string }> => {
     if (API_BASE) {
       try {

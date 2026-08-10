@@ -90,6 +90,8 @@ export function ModemManager() {
   const [zteBusy, setZteBusy] = useState(false)
   const [zteError, setZteError] = useState<string | null>(null)
   const [zteResult, setZteResult] = useState<{ message: string; unlocked: boolean | null; imei: string; nckAttempts: string; base: string; steps: UnlockStep[]; warning: string; compatBlocked: boolean } | null>(null)
+  const [zteRebootBusy, setZteRebootBusy] = useState(false)
+  const [zteRebootResult, setZteRebootResult] = useState<{ message: string; counterBefore: string; counterAfter: string; counterReset: boolean; steps: UnlockStep[] } | null>(null)
 
   const poll = async () => {
     setModems(await tauri.fetchModems())
@@ -162,6 +164,33 @@ export function ModemManager() {
       setZteError(`ZTE web unlock error: ${err}`)
     } finally {
       setZteBusy(false)
+    }
+  }
+
+  const runZteWebReboot = async () => {
+    setZteRebootBusy(true)
+    setZteRebootResult(null)
+    setZteError(null)
+    try {
+      const result = await tauri.zteWebReboot({
+        gateway: zteGateway.trim() || undefined,
+      })
+      if (result.success || result.steps.length > 0) {
+        setZteRebootResult({
+          message: result.message || (result.error || ''),
+          counterBefore: result.counterBefore,
+          counterAfter: result.counterAfter,
+          counterReset: result.counterReset,
+          steps: result.steps,
+        })
+        if (result.counterAfter) setZteResult((prev) => prev ? { ...prev, nckAttempts: result.counterAfter } : prev)
+      } else {
+        setZteError(result.error || result.message || 'ZTE reboot failed')
+      }
+    } catch (err) {
+      setZteError(`ZTE reboot error: ${err}`)
+    } finally {
+      setZteRebootBusy(false)
     }
   }
 
@@ -542,6 +571,14 @@ export function ModemManager() {
                   {zteBusy ? 'Working (may take ~10s)...' : 'Read Status & Unlock'}
                 </button>
 
+                <button
+                  onClick={runZteWebReboot}
+                  disabled={zteRebootBusy}
+                  className="w-full text-xs px-3 py-2 rounded-lg bg-neon-yellow/10 text-neon-yellow border border-neon-yellow/30 hover:bg-neon-yellow/20 transition-all disabled:opacity-40"
+                >
+                  {zteRebootBusy ? 'Rebooting (may take ~90s)...' : 'Reboot & Restore NCK Counter'}
+                </button>
+
                 {zteError && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2">
                     <p className="text-[11px] text-red-400">{zteError}</p>
@@ -567,6 +604,33 @@ export function ModemManager() {
                       </div>
                     )}
                     {zteResult.steps.map((step, i) => (
+                      <div key={i} className="mb-1.5 last:mb-0">
+                        <div className="flex items-center gap-2">
+                          <span className={step.ok ? 'text-neon-green' : 'text-red-400'}>
+                            {step.ok ? '✓' : '✗'}
+                          </span>
+                          <span className="text-[11px] text-white/70">{step.label}</span>
+                        </div>
+                        {step.output && (
+                          <div className="text-[10px] text-white/40 font-mono pl-5 whitespace-pre-wrap">{step.output}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {zteRebootResult && (
+                  <div className="bg-black/40 border border-white/5 rounded-lg p-2.5 max-h-52 overflow-y-auto custom-scrollbar">
+                    <p className={`text-[11px] mb-1.5 ${zteRebootResult.counterReset ? 'text-neon-green' : 'text-amber-400'}`}>
+                      {zteRebootResult.message}
+                    </p>
+                    {(zteRebootResult.counterBefore || zteRebootResult.counterAfter) && (
+                      <div className="text-[10px] font-mono text-white/40 mb-1.5">
+                        {zteRebootResult.counterBefore && `NCK attempts before: ${zteRebootResult.counterBefore}  `}
+                        {zteRebootResult.counterAfter && `after: ${zteRebootResult.counterAfter}`}
+                      </div>
+                    )}
+                    {zteRebootResult.steps.map((step, i) => (
                       <div key={i} className="mb-1.5 last:mb-0">
                         <div className="flex items-center gap-2">
                           <span className={step.ok ? 'text-neon-green' : 'text-red-400'}>
